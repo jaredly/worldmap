@@ -1,0 +1,14 @@
+{
+  "name": "7fa483887e820710",
+  "main": "7fa483887e820710@1404.js",
+  "version": "1404.0.0",
+  "homepage": "https://observablehq.com/d/7fa483887e820710",
+  "author": {
+    "name": "Jared Forsyth",
+    "url": "https://observablehq.com/@jaredly"
+  },
+  "type": "module",
+  "peerDependencies": {
+    "@observablehq/runtime": "4 - 5"
+  }
+}
