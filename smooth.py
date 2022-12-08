@@ -42,10 +42,10 @@ def union(one, two):
 bevel = skia.Paint.kBevel_Join
 
 def expand(path, width):
-    return union(stroke(path, width ), path)
+    return union(stroke(path, width, skia.Paint.kRound_Join ), path)
 
 def contract(outline, width):
-    return skia.Op(outline, stroke(outline, width ), skia.PathOp.kDifference_PathOp)
+    return skia.Op(outline, stroke(outline, width, skia.Paint.kRound_Join ), skia.PathOp.kDifference_PathOp)
 
 def simplify(path, width, i):
     try:
@@ -71,7 +71,7 @@ print("ok")
 width = 3500
 height = width * 2.15 
 
-stream = skia.FILEWStream('tand.svg')
+stream = skia.FILEWStream('tand-4.svg')
 canvas = skia.SVGCanvas.Make((width, int(height)), stream)
 
 def fill(r, g, b, a=1.0):
@@ -86,12 +86,12 @@ unioned = skia.Path()
 for path in separate:
     uninioned = union(unioned, path)
     exp = expand(path, 20)
-    canvas.drawPath(exp, fill(0, 0, 255, 0.5))
+    # canvas.drawPath(exp, fill(0, 0, 255, 0.5))
     outlined = union(outlined, exp)
     canvas.drawPath(path, line(255, 0, 0))
 
 print('intractit')
-canvas.drawPath(union(unioned, contract(outlined, 20)), fill(255,255,255,0.5))
+canvas.drawPath(union(unioned, contract(outlined, 20)), fill(0,0,255,0.5))
 
 
 # surface = skia.Surface(width, int(height))
