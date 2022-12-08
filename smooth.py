@@ -42,7 +42,7 @@ def union(one, two):
 bevel = skia.Paint.kBevel_Join
 
 def expand(path, width):
-    return union(stroke(path, width, skia.Paint.kRound_Join ), path)
+    return union(stroke(path, width, skia.Paint.kBevel_Join ), path)
 
 def contract(outline, width):
     return skia.Op(outline, stroke(outline, width, skia.Paint.kRound_Join ), skia.PathOp.kDifference_PathOp)
@@ -71,7 +71,7 @@ print("ok")
 width = 3500
 height = width * 2.15 
 
-stream = skia.FILEWStream('tand-4.svg')
+stream = skia.FILEWStream('tand-5.svg')
 canvas = skia.SVGCanvas.Make((width, int(height)), stream)
 
 def fill(r, g, b, a=1.0):
