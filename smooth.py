@@ -24,14 +24,7 @@ def from_cmds(cmds):
 			path.close()
 		else:
 			print("Bad news", cmd[0])
-	return path
-
-def to_cmds(path):
-	cmds = []
-
-cmds = json.load(open('./ok.cmds'))
-path = skia.Simplify(from_cmds(cmds))
-print("Loaded path")
+	return skia.Simplify(path)
 
 def stroke(path, width, join=skia.Paint.kMiter_Join):
 	paint = skia.Paint(
@@ -41,8 +34,92 @@ def stroke(path, width, join=skia.Paint.kMiter_Join):
 	)
 	np = skia.Path()
 	paint.getFillPath(path, np)
-	print('stroked')
 	return skia.Simplify(np)
+
+def union(one, two):
+    return skia.Op(one, two, skia.PathOp.kUnion_PathOp)
+
+bevel = skia.Paint.kBevel_Join
+
+def expand(path, width):
+    return union(stroke(path, width ), path)
+
+def contract(outline, width):
+    return skia.Op(outline, stroke(outline, width ), skia.PathOp.kDifference_PathOp)
+
+def simplify(path, width, i):
+    try:
+        outline = expand(path, width)
+        # print('outlined')
+        simplified = contract(outline, width)
+        # print('backed')
+        simplified = union(simplified, path)
+        # print('joined')
+        return simplified
+    except:
+        print('Failed once', i)
+        return None
+
+separate = [from_cmds(cmds) for i, cmds in enumerate(json.load(open('separate.cmds'))) if i != 1378]
+print("ok")
+
+# outlined = [expand(path, 20) for path in separate]
+
+# ok = [(path, simplify(path, 20, i)) for i, path in enumerate(separate)]#[:100]]
+
+
+width = 3500
+height = width * 2.15 
+
+stream = skia.FILEWStream('tand.svg')
+canvas = skia.SVGCanvas.Make((width, int(height)), stream)
+
+def fill(r, g, b, a=1.0):
+    return skia.Paint(Color=skia.Color(r, g, b), Alphaf=a)
+
+def line(r, g, b, w=0.5):
+    return skia.Paint(Color=skia.Color(r, g, b), Style=skia.Paint.kStroke_Style, StrokeWidth=w)
+
+outlined = skia.Path()
+unioned = skia.Path()
+
+for path in separate:
+    uninioned = union(unioned, path)
+    exp = expand(path, 20)
+    canvas.drawPath(exp, fill(0, 0, 255, 0.5))
+    outlined = union(outlined, exp)
+    canvas.drawPath(path, line(255, 0, 0))
+
+print('intractit')
+canvas.drawPath(union(unioned, contract(outlined, 20)), fill(255,255,255,0.5))
+
+
+# surface = skia.Surface(width, int(height))
+
+# for (path, simplified) in ok:
+# # with surface as canvas:
+#     if simplified:
+#         paint = skia.Paint(Color=skia.Color(0, 0, 255))
+#         canvas.drawPath(simplified, paint)
+#     paint = skia.Paint(Color=skia.Color(255, 255, 255), Alphaf=0.2)
+#     canvas.drawPath(path, paint)
+#     paint = skia.Paint(Color=skia.Color(255, 0, 0), Style=skia.Paint.kStroke_Style, StrokeWidth=0.5)
+#     canvas.drawPath(path, paint)
+
+del canvas
+stream.flush()
+
+fail()
+
+
+
+
+
+
+
+cmds = json.load(open('./ok.cmds'))
+path = from_cmds(cmds)
+print("Loaded path")
 
 sw = 10
 outline = skia.Op(stroke(path, 10), path, skia.PathOp.kUnion_PathOp)

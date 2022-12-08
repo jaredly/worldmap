@@ -53,6 +53,18 @@ const run = async () => {
         locateFile: (file: string) => './node_modules/pathkit-wasm/bin/' + file,
     });
 
+    if (true) {
+        const shape = await getShape('50m_physical/ne_50m_land');
+        const path = geoPath(projection);
+        const alls = shape.features.map((item) => {
+            const pk = PathKit.FromSVGString(path(item.geometry));
+            return pk.toCmds();
+        });
+
+        await writeFile('./separate.cmds', JSON.stringify(alls));
+        fail;
+    }
+
     const p = await loadOrCompute(PathKit, './ok.path', async () => {
         // const shape = await getShape('50m_cultural/ne_50m_admin_0_countries');
         const shape = await getShape('50m_physical/ne_50m_land');
