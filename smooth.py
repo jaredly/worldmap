@@ -44,10 +44,12 @@ def stroke(path, width, join=skia.Paint.kMiter_Join):
 	print('stroked')
 	return skia.Simplify(np)
 
-sw = 15
-
-outline = stroke(path, sw)
+sw = 10
+outline = skia.Op(stroke(path, 10), path, skia.PathOp.kUnion_PathOp)
+print('mid')
+outline = stroke(outline, 10)
 print('outlined')
+# Ugh this one is breaking?
 both = skia.Op(outline, path, skia.PathOp.kUnion_PathOp)
 print('oped')
 back = stroke(both, sw)
