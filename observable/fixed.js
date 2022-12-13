@@ -9,21 +9,10 @@ const DOM = {
     element(n) {
         return document.createElement(n);
     },
-    context2d(width, height) {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        document.body.append(canvas);
-        return canvas.getContext('2d');
-    },
     svg(width, height) {
         const s = document.createElement('div');
-        s.innerHTML = `<svg
-		xmlns="http://www.w3.org/2000/svg"
-		version="1.1"
-		width="${width}"
-		height="${height}"
-		></svg>`;
+        s.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg"
+		version="1.1" width="${width}" height="${height}"></svg>`;
         document.body.append(s);
         return s.firstElementChild;
     },
@@ -69,9 +58,6 @@ function renderer(width, height, mode) {
                     const [x, y] = path.centroid(d.geometry);
                     return pointsToPath(star({ x, y }, radius, radius / 2, 3));
                 });
-            // .attr('transform', (d) => {
-            //     return `translate(${x}, ${y})`;
-            // });
         },
         labels: (
             path,
@@ -143,24 +129,6 @@ function renderer(width, height, mode) {
     };
 }
 
-function _renderCanvas() {
-    return (context) => (path, title, fill, stroke, strokeWidth, item) => {
-        if (fill) {
-            context.beginPath();
-            path(item);
-            context.fillStyle = fill;
-            context.fill();
-        }
-        if (stroke) {
-            if (strokeWidth) context.lineWidth = strokeWidth;
-            context.beginPath();
-            path(item);
-            context.strokeStyle = stroke;
-            context.stroke();
-        }
-    };
-}
-
 function mainGeometry(path, geometry) {
     if (geometry.type === 'MultiPolygon') {
         return geometry.coordinates
@@ -178,49 +146,7 @@ function labelAngle(projection, [x, y]) {
     return Math.atan2(y2 - y, x2 - x);
 }
 
-function borderedCenteredText(context, text, x, y) {
-    const { width } = context.measureText(text);
-    context.strokeText(text, x - width / 2, y);
-    context.fillText(text, x - width / 2, y);
-}
-
-function labelPoints(context, projection, path, fontSize, above, points) {
-    points.forEach((point) => {
-        const [x, y] = path.centroid(mainGeometry(path, point.geometry));
-        const angle = labelAngle(projection, [x, y]);
-
-        context.save();
-        context.translate(x, y);
-        context.rotate(angle - Math.PI / 2);
-
-        context.font = `${fontSize}px sans-serif`;
-        const ty = above ? -fontSize / 2 : fontSize / 2;
-        const { width } = context.measureText(point.label);
-        context.strokeText(point.label, -width / 2, ty);
-        context.fillText(point.label, -width / 2, ty);
-
-        context.restore();
-    });
-}
-
-function circle(context, [x, y], rad) {
-    context.moveTo(x + rad, y);
-    context.arc(x, y, rad, 0, Math.PI * 2);
-}
-
-// async function getShape(name) {
-//     const get = (url) => fetch(url).then((res) => res.arrayBuffer());
-//     const shp = await get(
-//         `https://cdn.rawgit.com/jaredly/naturalearth-mirror/master/${name}.shp`,
-//     );
-//     const dbf = await get(
-//         `https://cdn.rawgit.com/jaredly/naturalearth-mirror/master/${name}.dbf`,
-//     );
-//     const geojson = shapefile.read(shp, dbf, { encoding: 'utf-8' });
-//     return geojson;
-// }
-
-async function getLocalShape(name) {
+async function getShape(name) {
     const get = (url) => fetch(url).then((res) => res.arrayBuffer());
     const shp = await get(`./naturalearth-mirror/${name}.shp`);
     const dbf = await get(`./naturalearth-mirror/${name}.dbf`);
@@ -228,141 +154,64 @@ async function getLocalShape(name) {
     return geojson;
 }
 
-const getShape = getLocalShape;
-
-function consolidate_features(features) {
-    return features.map((f) => {
-        if (f.geometry.type === 'MultiLineString') {
-            return {
-                ...f,
-                geometry: {
-                    ...f.geometry,
-                    coordinates: f.geometry.coordinates.map((line) => {
-                        const shorter = [];
-                        for (var i = 0; i < line.length - 1; i += skip) {
-                            shorter.push(line[i]);
-                        }
-                        shorter.push(line[line.length - 1]);
-                        return shorter;
-                    }),
-                },
-            };
-        } else {
-            return f;
-        }
-    });
-}
-
-const chart = async () => {
-    var width = 500;
-    var height = 200;
-    var data = names.features.map((f) => f.properties.LABELRANK);
-    const svg = d3.select(DOM.svg(width, height));
-    var margin = { top: 20, right: 20, bottom: 30, left: 40 };
-    var x = (x = d3
-        .scaleLinear()
-        .domain(d3.extent(data))
-        .nice()
-        .range([margin.left, width - margin.right]));
-    var bins = d3.histogram().domain(x.domain()).thresholds(x.ticks(40))(data);
-    var y = d3
-        .scaleLinear()
-        .domain([0, d3.max(bins, (d) => d.length)])
-        .nice()
-        .range([height - margin.bottom, margin.top]);
-    const bar = svg
-        .append('g')
-        .attr('fill', 'steelblue')
-        .selectAll('rect')
-        .data(bins)
-        .enter()
-        .append('rect')
-        .attr('x', (d) => x(d.x0) + 1)
-        .attr('width', (d) => Math.max(0, x(d.x1) - x(d.x0) - 1))
-        .attr('y', (d) => y(d.length))
-        .attr('height', (d) => y(0) - y(d.length));
-
-    var yAxis = (g) =>
-        g
-            .attr('transform', `translate(${margin.left},0)`)
-            .call(d3.axisLeft(y))
-            .call((g) => g.select('.domain').remove())
-            .call((g) =>
-                g
-                    .select('.tick:last-of-type text')
-                    .clone()
-                    .attr('x', 4)
-                    .attr('text-anchor', 'start')
-                    .attr('font-weight', 'bold')
-                    .text(data.y),
-            );
-
-    var xAxis = (g) =>
-        g
-            .attr('transform', `translate(0,${height - margin.bottom})`)
-            .call(d3.axisBottom(x).tickSizeOuter(1))
-            .call((g) =>
-                g
-                    .append('text')
-                    .attr('x', width - margin.right)
-                    .attr('y', -4)
-                    .attr('fill', '#000')
-                    .attr('font-weight', 'bold')
-                    .attr('text-anchor', 'end')
-                    .text(data.x),
-            );
-
-    svg.append('g').call(xAxis);
-
-    svg.append('g').call(yAxis);
-
-    return svg.node();
-};
-
 const skip = 30;
 
-const large_countries = [
-    'Canada',
-    'Brazil',
-    'Russia',
-    'China',
-    'India',
-    'Argentina',
-    'Australia',
-];
-
-console.log('getting shapes');
-const names = await getShape('110m_cultural/ne_110m_populated_places');
-const detailed_provinces = await getShape(
-    '10m_cultural/ne_10m_admin_1_states_provinces_lines',
-);
-console.log('got shapes');
-
-// const projection = geoAirocean().fitExtent(
-//     [
-//         [0, 0],
-//         [500, 500],
-//     ],
-//     { type: 'Sphere' },
-// );
 const inversePoint = () => {
     const p = geoAirocean();
     return p.invert(p([0, 0]));
 };
 
-const show_provinces = {
-    ...detailed_provinces,
-    features: consolidate_features(
-        detailed_provinces.features.filter((f) =>
-            large_countries.includes(f.properties.adm0_name),
-        ),
-    ),
-};
+// function consolidate_features(features) {
+//     return features.map((f) => {
+//         if (f.geometry.type === 'MultiLineString') {
+//             return {
+//                 ...f,
+//                 geometry: {
+//                     ...f.geometry,
+//                     coordinates: f.geometry.coordinates.map((line) => {
+//                         const shorter = [];
+//                         for (var i = 0; i < line.length - 1; i += skip) {
+//                             shorter.push(line[i]);
+//                         }
+//                         shorter.push(line[line.length - 1]);
+//                         return shorter;
+//                     }),
+//                 },
+//             };
+//         } else {
+//             return f;
+//         }
+//     });
+// }
+
+// const large_countries = [
+//     'Canada',
+//     'Brazil',
+//     'Russia',
+//     'China',
+//     'India',
+//     'Argentina',
+//     'Australia',
+// ];
+
+// const detailed_provinces = await getShape(
+//     '10m_cultural/ne_10m_admin_1_states_provinces_lines',
+// );
+
+// const show_provinces = {
+//     ...detailed_provinces,
+//     features: consolidate_features(
+//         detailed_provinces.features.filter((f) =>
+//             large_countries.includes(f.properties.adm0_name),
+//         ),
+//     ),
+// };
 
 const output = async () => {
     var huge = true;
     var width = 3500;
-    var height = huge ? width * 2.15 : width / 2;
+    var height = width * 2.15;
+    const detail = false;
 
     var render = renderer(width, height, 'svg');
 
@@ -370,7 +219,7 @@ const output = async () => {
     var path = geoPath(projection, render.context);
 
     var angle = projection.angle();
-    if (huge) projection.angle(angle - 90);
+    projection.angle(angle - 90);
 
     projection.fitExtent(
         [
@@ -379,6 +228,8 @@ const output = async () => {
         ],
         { type: 'Sphere' },
     );
+
+    const names = await getShape('110m_cultural/ne_110m_populated_places');
 
     // render.features(
     //     path,
@@ -411,102 +262,80 @@ const output = async () => {
     render.features(
         path,
         'Countries',
-        { stroke: 'rgba(0, 0, 255, 0.3)', strokeWidth: 1 },
+        { fill: '#aaf', stroke: 'rgba(0, 0, 255, 0.3)', strokeWidth: 1 },
         await getShape('110m_cultural/ne_110m_admin_0_countries'),
     );
 
-    render.features(
-        path,
-        'Land',
-        { stroke: 'red', strokeWidth: 0.5 },
-        await getShape('110m_cultural/ne_110m_admin_0_boundary_lines_land'),
-    );
+    if (detail) {
+        render.features(
+            path,
+            'Land boundaries',
+            { stroke: 'red', strokeWidth: 0.5 },
+            await getShape('110m_cultural/ne_110m_admin_0_boundary_lines_land'),
+        );
 
-    render.features(
-        path,
-        'Land detail',
-        { fill: 'none', stroke: 'magenta', strokeWidth: 0.5 },
-        await getShape('50m_physical/ne_50m_land'),
-    );
+        render.features(
+            path,
+            'Land detail',
+            { fill: 'none', stroke: 'magenta', strokeWidth: 0.5 },
+            await getShape('50m_physical/ne_50m_land'),
+        );
 
-    render.features(
-        path,
-        'Lakes',
-        { fill: 'black' },
-        await getShape('10m_physical/ne_10m_lakes'),
-    );
-    render.features(
-        path,
-        'Rivers',
-        { stroke: '#0af', strokeWidth: 0.5 },
-        await getLocalShape(
-            // hmm should I get those locally?
-            '10m_physical/ne_10m_rivers_lake_centerlines_scale_rank',
-        ),
-    );
-    render.features(
-        path,
-        'Rivers',
-        { stroke: '#000', strokeWidth: 0.5 },
-        await getShape(
-            // hmm should I get those locally?
-            '50m_physical/ne_50m_rivers_lake_centerlines_scale_rank',
-        ),
-    );
+        render.features(
+            path,
+            'Lakes',
+            { fill: 'black' },
+            await getShape('10m_physical/ne_10m_lakes'),
+        );
+        render.features(
+            path,
+            'Rivers',
+            { stroke: '#0af', strokeWidth: 0.5 },
+            await getShape(
+                '10m_physical/ne_10m_rivers_lake_centerlines_scale_rank',
+            ),
+        );
+        render.features(
+            path,
+            'Rivers',
+            { stroke: '#000', strokeWidth: 0.5 },
+            await getShape(
+                '50m_physical/ne_50m_rivers_lake_centerlines_scale_rank',
+            ),
+        );
 
-    // render.features(
-    //     path,
-    //     'Countries',
-    //     { stroke: '#f00', strokeWidth: 0.5 },
-    //     await getShape('110m_cultural/ne_110m_admin_0_boundary_lines_land'),
-    // );
+        render.circles(
+            path,
+            '1mil',
+            2,
+            { fill: 'red', strokeWidth: 0.5, stroke: 'black' },
+            names.features.filter(
+                (f) =>
+                    f.properties.POP_OTHER > 1 * 1000 * 1000 &&
+                    f.properties.POP_OTHER < 5 * 1000 * 1000,
+            ),
+        );
+        render.circles(
+            path,
+            '5mil',
+            3,
+            { fill: 'magenta', strokeWidth: 0.5, stroke: 'black' },
+            names.features.filter(
+                (f) => f.properties.POP_OTHER >= 5 * 1000 * 1000,
+            ),
+        );
 
-    render.circles(
-        path,
-        '1mil',
-        2,
-        { fill: 'red', strokeWidth: 0.5, stroke: 'black' },
-        names.features.filter((f) => f.properties.POP_OTHER > 1 * 1000 * 1000),
-    );
-    render.circles(
-        path,
-        '5mil',
-        3,
-        { fill: 'magenta', strokeWidth: 0.5, stroke: 'black' },
-        names.features.filter((f) => f.properties.POP_OTHER > 5 * 1000 * 1000),
-    );
-
-    // render.labels(
-    //     path,
-    //     projection,
-    //     'Countries',
-    //     8,
-    //     { fill: '#aaa', stroke: 'white', strokeWidth: 2 },
-    //     await getShape('110m_cultural/ne_110m_admin_0_countries'),
-    // );
-
-    render.features(
-        path,
-        'US',
-        { stroke: '#fa0', strokeWidth: 0.5 },
-        await getShape('50m_cultural/ne_50m_admin_1_states_provinces_lines'),
-    );
-
-    // render.features(
-    //     path,
-    //     'US',
-    //     { stroke: 'magenta', strokeWidth: 0.5 },
-    //     await getShape('10m_cultural/ne_10m_railroads'),
-    // );
-
-    // render.features(
-    //     path,
-    //     'US',
-    //     { stroke: '#fa0', strokeWidth: 0.5 },
-    //     await getShape('110m_cultural/ne_110m_admin_1_states_provinces_lines'),
-    // );
+        render.features(
+            path,
+            'States',
+            { stroke: '#fa0', strokeWidth: 0.5 },
+            await getShape(
+                '50m_cultural/ne_50m_admin_1_states_provinces_lines',
+            ),
+        );
+    }
 
     return render.node();
 };
-console.log('outing the put?');
+
 output().then((node) => document.body.append(node));
