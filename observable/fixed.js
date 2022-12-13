@@ -3,6 +3,7 @@ import * as topojson from 'topojson';
 import * as shapefile from 'shapefile';
 import { geoPath } from 'd3-geo';
 import { geoAirocean } from 'd3-geo-polygon';
+import star, { pointsToPath } from './star';
 
 const DOM = {
     element(n) {
@@ -61,6 +62,7 @@ const output = async () => {
     //     { fill: '#eee' },
     //     await getShape('50m_physical/ne_50m_land'),
     // );
+
     render.features(
         path,
         'Land',
@@ -92,6 +94,7 @@ const output = async () => {
             '50m_physical/ne_50m_rivers_lake_centerlines_scale_rank',
         ),
     );
+
     // render.features(
     //     path,
     //     'Countries',
@@ -178,13 +181,17 @@ function renderer(width, height, mode) {
         },
         circles: (path, title, radius, style, features) => {
             group(title, style)
-                .selectAll('circle')
+                .selectAll('path')
                 .data(features)
                 .enter()
-                .append('circle')
-                .attr('r', radius)
-                .attr('cx', (d) => path.centroid(d.geometry)[0])
-                .attr('cy', (d) => path.centroid(d.geometry)[1]);
+                .append('path')
+                .attr('d', (d) => {
+                    const [x, y] = path.centroid(d.geometry);
+                    return pointsToPath(star({ x, y }, radius, radius / 2, 5));
+                });
+            // .attr('transform', (d) => {
+            //     return `translate(${x}, ${y})`;
+            // });
         },
         labels: (
             path,
