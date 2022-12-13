@@ -54,14 +54,14 @@ const run = async () => {
     });
 
     if (true) {
-        const shape = await getShape('50m_physical/ne_50m_land');
+        const shape = await getShape('110m_physical/ne_110m_land');
         const path = geoPath(projection);
         const alls = shape.features.map((item) => {
             const pk = PathKit.FromSVGString(path(item.geometry));
             return pk.toCmds();
         });
 
-        await writeFile('./separate.cmds', JSON.stringify(alls));
+        await writeFile('./110m_land.cmds', JSON.stringify(alls));
         fail;
     }
 

@@ -47,8 +47,11 @@ round = skia.Paint.kRound_Join
 def expand(path, width, join=round):
     return union(stroke(path, width, join), path)
 
-def contract(outline, width, join=round, simplify=True):
-    return skia.Op(outline, stroke(outline, width, join, simplify), skia.PathOp.kDifference_PathOp)
+def contract(outline, width, join=round, simplify=True, debug=None):
+    stroked = stroke(outline, width, join, simplify)
+    if debug:
+        debug.drawPath(stroked, line(0, 255, 0))
+    return skia.Op(outline, stroked, skia.PathOp.kDifference_PathOp)
 
 def fill(r, g, b, a=1.0):
     return skia.Paint(Color=skia.Color(r, g, b), Alphaf=a)
@@ -57,81 +60,46 @@ def line(r, g, b, w=0.5):
     return skia.Paint(Color=skia.Color(r, g, b), Style=skia.Paint.kStroke_Style, StrokeWidth=w)
 
 
-width = 3500
-height = width * 2.15 
 
-def coastline(file, ex, con, width):
-    print(">>", file)
-    stream = skia.FILEWStream(file)
-    canvas = skia.SVGCanvas.Make((width, int(height)), stream)
-
-    outlined = skia.Path()
-    unioned = skia.Path()
-
-    separate = [from_cmds(cmds) for i, cmds in enumerate(json.load(open('separate.cmds'))) if i != 1378]
+def coastline(file, ex, con, amount, debug=True):
+    separate = [from_cmds(cmds) for i, cmds in enumerate(json.load(open('110m_land.cmds')))] # if i != 1378]
+    small = [from_cmds(cmds) for i, cmds in enumerate(json.load(open('separate.cmds')))] # if i != 1378]
     print("Loaded land masses")
-
-    for path in separate[:40]:
-        uninioned = union(unioned, path)
-        exp = expand(path, width, ex)
-        outlined = union(outlined, exp)
-        canvas.drawPath(path, line(255, 0, 0))
-
-    canvas.drawPath(union(unioned, contract(outlined, width, con)), fill(0,0,255,0.5))
-
-    del canvas
-    stream.flush()
-
-# coastline('round-round-20.svg', round, round, 20)
-coastline('round-round-10.svg', round, round, 10)
-coastline('round-bevel-10.svg', round, bevel, 10)
-
-
-def olds():
-    surface = skia.Surface(width, int(height))
-
-    for (path, simplified) in ok:
-    # with surface as canvas:
-        if simplified:
-            paint = skia.Paint(Color=skia.Color(0, 0, 255))
-            canvas.drawPath(simplified, paint)
-        paint = skia.Paint(Color=skia.Color(255, 255, 255), Alphaf=0.2)
-        canvas.drawPath(path, paint)
-        paint = skia.Paint(Color=skia.Color(255, 0, 0), Style=skia.Paint.kStroke_Style, StrokeWidth=0.5)
-        canvas.drawPath(path, paint)
-
-    cmds = json.load(open('./ok.cmds'))
-    path = from_cmds(cmds)
-    print("Loaded path")
-
-    sw = 10
-    outline = skia.Op(stroke(path, 10), path, skia.PathOp.kUnion_PathOp)
-    print('mid')
-    outline = stroke(outline, 10)
-    print('outlined')
-    # Ugh this one is breaking?
-    both = skia.Op(outline, path, skia.PathOp.kUnion_PathOp)
-    print('oped')
-    back = stroke(both, sw)
-    simplified = skia.Op(both, back, skia.PathOp.kDifference_PathOp)
-    simplified = skia.Op(simplified, path, skia.PathOp.KUnion_PathOp)
 
     width = 3500
     height = width * 2.15 
 
-    stream = skia.FILEWStream('output-20.svg')
+    print(">>", file)
+    stream = skia.FILEWStream(file)
     canvas = skia.SVGCanvas.Make((width, int(height)), stream)
 
-    # surface = skia.Surface(width, int(height))
+    dc = None # canvas if debug else None
 
-    if True:
-    # with surface as canvas:
-        paint = skia.Paint(Color=skia.Color(0, 0, 255))
-        canvas.drawPath(both, paint)
-        paint = skia.Paint(Color=skia.Color(0, 255, 0))
-        canvas.drawPath(simplified, paint)
-        paint2 = skia.Paint(Color=skia.Color(255, 0, 0), Style=skia.Paint.kStroke_Style, StrokeWidth=0.5)
-        canvas.drawPath(path, paint2)
+    outlined = skia.Path()
+    unioned = skia.Path()
+
+    # for path in small:
+    #     canvas.drawPath(path, line(0, 0, 0))
+
+    for path in separate:
+        unioned = union(unioned, path)
+        exp = expand(path, amount, ex)
+        outlined = union(outlined, exp)
+        # canvas.drawPath(path, line(255, 0, 0))
+
+    # if debug:
+    canvas.drawPath(outlined, line(0, 0, 0))
+        # canvas.drawPath(unioned, fill(0, 0, 0))
+    # canvas.drawPath(union(unioned, contract(outlined, amount, con, debug=dc)), fill(0,0,255,0.5))
 
     del canvas
     stream.flush()
+    text = open(file).read()
+    # open(file, 'w').write(text + '\n</svg>')
+    print('done')
+
+# coastline('110_round-bevel-40.svg', round, bevel, 95)
+coastline('110_bevel-bevel-40.svg', bevel, bevel, 95)
+# coastline('110_round-round-10.svg', round, round, 10)
+# coastline('110_round-bevel-10.svg', round, bevel, 10)
+# coastline('110_round-bevel-20.svg', round, bevel, 20)
