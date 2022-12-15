@@ -1,70 +1,66 @@
 import * as React from 'react';
-import PathKitInit from 'pathkit-wasm';
-import { usePromise } from './app';
-import localforage from 'localforage';
 import { output } from './fixed';
 import { usePanZoom } from './usePanZoom';
 import { Layers } from './Layers';
 import { Sidebar } from './Sidebar';
-import { State } from './State';
+import { Mods, State, Text } from './State';
+import { useLocalforage } from './useLocalforage';
+import { Coord } from './star';
 
-export const useLocalforage = <T,>(
-    key: string,
-    initial: T,
-): [T, React.Dispatch<React.SetStateAction<T>>] => {
-    const [value, setValue] = React.useState(initial);
-    React.useEffect(() => {
-        localforage.getItem(key).then((data) => {
-            if (data) {
-                setValue(data as T);
-            }
-        });
-    }, []);
-    React.useEffect(() => {
-        if (value !== initial) {
-            localforage.setItem(key, value);
-        }
-    }, [value]);
-    return [value, setValue];
-};
-
-export const useLocalStorage = <T,>(
-    key: string,
-    initial: T,
-): [T, React.Dispatch<React.SetStateAction<T>>] => {
-    const [value, setValue] = React.useState((): T => {
-        const data = localStorage[key];
-        if (data) {
-            return JSON.parse(data);
-        }
-        return initial;
-    });
-    React.useEffect(() => {
-        if (value !== initial) {
-            localStorage[key] = JSON.stringify(value);
-        }
-    }, [value]);
-    return [value, setValue];
+export type Drag = {
+    type: 'label';
+    text: Text;
+    p0: Coord;
+    p1: Coord;
+    s0: Coord;
+    s1: Coord;
+    mode: 'move' | 'rotate' | 'scale';
 };
 
 export const Wrapper = () => {
     const [data, setData] = useLocalforage<State>('worldmap', { layers: [] });
-    // const width = 1000;
-    // const height = 1000;
+    const [mods, setMods] = useLocalforage<Mods>('worldmap-mods', {
+        labels: {},
+        paths: [],
+    });
+
+    const [drag, setDrag] = React.useState<Drag | null>(null);
+
     const width = 1000;
-    // const height = width * 2.15;
     const height = 1000;
 
     const [pos, setPos] = React.useState({ x: 0, y: 0 });
-
-    // const scale = 4;
-
     // const dpi = 96;
     const dpi = 120;
 
     const sheetW = (280 / 25.4) * dpi;
     const sheetH = (200 / 25.4) * dpi;
     const pz = usePanZoom(width, height);
+
+    const startDrag = React.useCallback(
+        (text: Text, evt: React.MouseEvent) => {
+            evt.preventDefault();
+            let top = evt.currentTarget as HTMLElement;
+            while (top.nodeName !== 'svg') {
+                top = top.parentElement as HTMLElement;
+            }
+            const box = top.getBoundingClientRect();
+            const pos = pz.fromScreen(
+                evt.clientX - box.left,
+                evt.clientY - box.top,
+            );
+            setDrag({
+                type: 'label',
+                text: text,
+                p0: pos,
+                p1: pos,
+                s0: { x: evt.clientX, y: evt.clientY },
+                s1: { x: evt.clientX, y: evt.clientY },
+                mode: evt.shiftKey ? 'rotate' : evt.metaKey ? 'scale' : 'move',
+            });
+        },
+        [pz],
+    );
 
     return (
         <div>
@@ -90,18 +86,30 @@ export const Wrapper = () => {
                     height={height}
                     onMouseMove={(evt) => {
                         const box = evt.currentTarget.getBoundingClientRect();
-                        setPos(
-                            pz.fromScreen(
-                                evt.clientX - box.left,
-                                evt.clientY - box.top,
-                            ),
+                        const pos = pz.fromScreen(
+                            evt.clientX - box.left,
+                            evt.clientY - box.top,
                         );
+                        const spos = { x: evt.clientX, y: evt.clientY };
+                        setPos(pos);
+                        setDrag((drag) =>
+                            drag ? { ...drag, p1: pos, s1: spos } : drag,
+                        );
+                    }}
+                    onMouseUp={(evt) => {
+                        setDrag(null);
                     }}
                     {...pz.props}
                 >
                     <g transform={`translate(${-pz.tl.x}, ${-pz.tl.y})`}>
-                        <Layers data={data} />
-                        <rect
+                        <Layers
+                            data={data}
+                            mods={mods}
+                            setMods={setMods}
+                            drag={drag}
+                            startDrag={startDrag}
+                        />
+                        {/* <rect
                             stroke="red"
                             strokeWidth={1}
                             fill="none"
@@ -109,7 +117,7 @@ export const Wrapper = () => {
                             y={pos.y}
                             width={sheetW}
                             height={sheetH}
-                        />
+                        /> */}
                     </g>
                 </svg>
                 <Sidebar data={data} setData={setData} />

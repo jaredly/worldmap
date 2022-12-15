@@ -7,6 +7,7 @@ export type Text = {
     text: string;
     rotate: number;
     pos: { x: number; y: number };
+    scale?: number;
 };
 
 export type Style = {
@@ -14,21 +15,24 @@ export type Style = {
     stroke?: { color: string; width: number };
 };
 
-export type Layer = {
+export type Layer<Contents> = {
     name: string;
     visible: boolean;
-    contents:
-        | {
-              type: 'Text';
-              font: { size: number; family: string };
-              items: Text[];
-          }
-        | { type: 'Path'; items: string[] };
+    contents: Contents;
     style: Style;
 };
 
+export type TextLayer = Layer<{
+    type: 'Text';
+    font: { size: number; family: string };
+    items: Text[];
+}>;
+
+export type PathLayer = Layer<{ type: 'Path'; items: string[] }>;
+export type EitherLayer = TextLayer | PathLayer;
+
 export type State = {
-    layers: Layer[];
+    layers: (TextLayer | PathLayer)[];
 };
 
 export type Mods = {
@@ -36,6 +40,7 @@ export type Mods = {
         [key: string]: {
             rotate: number;
             pos: { x: number; y: number };
+            scale: number;
         };
     };
     paths: {

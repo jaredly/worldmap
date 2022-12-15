@@ -9,6 +9,9 @@ THE EDITOR
 - [ ] move text labels
 	(also, I want the text label location mods to be ... saved separately from the other data. So I can refresh data and it be ok.)
 	(also, any new paths that I make should be similarly in a different place.)
+- [ ] select certain things that would be CUT
+	- and make them NOT CUT
+	... maybe this is "MOVE TO OTHER LAYER"? Yeah.
 - [ ] maybe can clip
   - I guess I should validate this first
 	- ok so here's an idea. For the big majority of the stuffs, maybe what I want to do is
@@ -16,6 +19,10 @@ THE EDITOR
 		So then I only have to do expensive clipping dealios for the cutting stuff.
 
 		Can I do a "does intersect"?
+
+
+Ah what about this story.
+So loading the data, we go "reload an individual layer"? Maybe?
 
 
 

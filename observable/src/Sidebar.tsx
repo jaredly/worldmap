@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Layer, State } from './State';
+import { EitherLayer, Layer, State } from './State';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { ColorPicker } from 'primereact/colorpicker';
@@ -15,7 +15,7 @@ export function Sidebar({
     const op = React.useRef<OverlayPanel>(null);
     const [editing, setEditing] = React.useState<null | number>(null);
     const changeLayer = React.useCallback(
-        (i: number, fn: (l: Layer) => Layer) => {
+        (i: number, fn: (l: EitherLayer) => EitherLayer) => {
             setData((data) => {
                 const newLayers = [...data.layers];
                 newLayers[i] = fn(newLayers[i]);
@@ -26,78 +26,10 @@ export function Sidebar({
     );
     return (
         <div>
-            {/* <Button
-                type="button"
-                label="Basic"
-                onClick={(e) => op.current?.toggle(e)}
-            /> */}
-
             <OverlayPanel ref={op} dismissable>
-                {editing != null ? (
-                    <>
-                        {/* {JSON.stringify(data.layers[editing].style)} */}
-                        {data.layers[editing].style.fill &&
-                        data.layers[editing].style.fill !== 'none' ? (
-                            <div>
-                                Fill:
-                                <ColorChange
-                                    value={data.layers[editing].style.fill!}
-                                    onChange={(value) => {
-                                        changeLayer(editing!, (layer) => ({
-                                            ...layer,
-                                            style: {
-                                                ...layer.style,
-                                                fill: value,
-                                            },
-                                        }));
-                                    }}
-                                />
-                            </div>
-                        ) : null}
-                        {data.layers[editing].style.stroke ? (
-                            <div>
-                                Stroke:
-                                <ColorChange
-                                    value={
-                                        data.layers[editing].style.stroke!.color
-                                    }
-                                    onChange={(value) => {
-                                        changeLayer(editing!, (layer) => ({
-                                            ...layer,
-                                            style: {
-                                                ...layer.style,
-                                                stroke: {
-                                                    ...layer.style.stroke!,
-                                                    color: value,
-                                                },
-                                            },
-                                        }));
-                                    }}
-                                />
-                                Width:
-                                <BlurInput
-                                    value={data.layers[
-                                        editing
-                                    ].style.stroke!.width.toString()}
-                                    onChange={(value) => {
-                                        const n = +value;
-                                        if (isNaN(n)) return;
-                                        changeLayer(editing!, (layer) => ({
-                                            ...layer,
-                                            style: {
-                                                ...layer.style,
-                                                stroke: {
-                                                    ...layer.style.stroke!,
-                                                    width: n,
-                                                },
-                                            },
-                                        }));
-                                    }}
-                                />
-                            </div>
-                        ) : null}
-                    </>
-                ) : null}
+                {editing != null
+                    ? styleEditor(data, editing, changeLayer)
+                    : null}
             </OverlayPanel>
             {data.layers.map((layer, i) => (
                 <div key={i}>
@@ -156,5 +88,72 @@ export function Sidebar({
                 </div>
             ))}
         </div>
+    );
+}
+
+function styleEditor(
+    data: State,
+    editing: number,
+    changeLayer: (i: number, fn: (l: EitherLayer) => EitherLayer) => void,
+): React.ReactNode {
+    const layer = data.layers[editing];
+    return (
+        <>
+            {layer.style.fill && layer.style.fill !== 'none' ? (
+                <div>
+                    Fill:
+                    <ColorChange
+                        value={layer.style.fill!}
+                        onChange={(value) => {
+                            changeLayer(editing!, (layer) => ({
+                                ...layer,
+                                style: {
+                                    ...layer.style,
+                                    fill: value,
+                                },
+                            }));
+                        }}
+                    />
+                </div>
+            ) : null}
+            {layer.style.stroke ? (
+                <div>
+                    Stroke:
+                    <ColorChange
+                        value={layer.style.stroke.color}
+                        onChange={(value) => {
+                            changeLayer(editing!, (layer) => ({
+                                ...layer,
+                                style: {
+                                    ...layer.style,
+                                    stroke: {
+                                        ...layer.style.stroke!,
+                                        color: value,
+                                    },
+                                },
+                            }));
+                        }}
+                    />
+                    Width:
+                    <BlurInput
+                        value={layer.style.stroke.width.toString()}
+                        onChange={(value) => {
+                            const n = +value;
+                            if (isNaN(n)) return;
+                            changeLayer(editing!, (layer) => ({
+                                ...layer,
+                                style: {
+                                    ...layer.style,
+                                    stroke: {
+                                        ...layer.style.stroke!,
+                                        width: n,
+                                    },
+                                },
+                            }));
+                        }}
+                    />
+                </div>
+            ) : null}
+        </>
     );
 }
