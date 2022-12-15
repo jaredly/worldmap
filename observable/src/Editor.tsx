@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { output } from './fixed';
 import { usePanZoom } from './usePanZoom';
-import { Layers } from './Layers';
+import { dragItem, Layers } from './Layers';
 import { Sidebar } from './Sidebar';
 import { Mods, State, Text } from './State';
 import { useLocalforage } from './useLocalforage';
@@ -97,6 +97,20 @@ export const Wrapper = () => {
                         );
                     }}
                     onMouseUp={(evt) => {
+                        if (drag) {
+                            const changed = dragItem(drag.text, drag);
+                            setMods({
+                                ...mods,
+                                labels: {
+                                    ...mods.labels,
+                                    [drag.text.text]: {
+                                        scale: changed.scale ?? 1,
+                                        pos: changed.pos,
+                                        rotate: changed.rotate,
+                                    },
+                                },
+                            });
+                        }
                         setDrag(null);
                     }}
                     {...pz.props}

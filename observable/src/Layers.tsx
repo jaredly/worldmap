@@ -33,7 +33,8 @@ const TextLayerV = ({
     return (
         <g
             style={{
-                font: `${layer.contents.font.size}px ${layer.contents.font.family}`,
+                font: `15px Cinzel`,
+                color: 'black',
             }}
             fill={layer.style.fill ?? 'none'}
             data-name={layer.name}
@@ -44,7 +45,7 @@ const TextLayerV = ({
                 strokeLinejoin="round"
             >
                 {layer.contents.items.map((item, j) => {
-                    item = maybeDrag(item, drag);
+                    item = maybeDrag(item, drag, mods.labels[item.text]);
                     return (
                         <text
                             key={j}
@@ -68,7 +69,7 @@ const TextLayerV = ({
             </g>
             <g>
                 {layer.contents.items.map((item, j) => {
-                    item = maybeDrag(item, drag);
+                    item = maybeDrag(item, drag, mods.labels[item.text]);
                     return (
                         <text
                             key={j}
@@ -94,24 +95,36 @@ const TextLayerV = ({
     );
 };
 
-const maybeDrag = (item: Text, drag: Drag | null) => {
-    if (drag?.text === item) {
-        if (drag.mode === 'rotate') {
-            return { ...item, rotate: item.rotate + (drag.s1.x - drag.s0.x) };
-        }
-        if (drag.mode === 'scale') {
-            return {
-                ...item,
-                scale: (item.scale || 1) * (1 + (drag.s1.x - drag.s0.x) / 100),
-            };
-        }
+export const dragItem = (item: Text, drag: Drag) => {
+    if (drag.mode === 'rotate') {
+        return { ...item, rotate: item.rotate + (drag.s1.x - drag.s0.x) / 2 };
+    }
+    if (drag.mode === 'scale') {
         return {
             ...item,
-            pos: {
-                x: item.pos.x + drag.p1.x - drag.p0.x,
-                y: item.pos.y + drag.p1.y - drag.p0.y,
-            },
+            scale: (item.scale || 1) * (1 + (drag.s1.x - drag.s0.x) / 100),
         };
+    }
+    return {
+        ...item,
+        pos: {
+            x: item.pos.x + drag.p1.x - drag.p0.x,
+            y: item.pos.y + drag.p1.y - drag.p0.y,
+        },
+    };
+};
+
+const maybeDrag = (item: Text, drag: Drag | null, mod?: Mods['labels']['']) => {
+    if (mod) {
+        item = {
+            ...item,
+            rotate: mod.rotate,
+            scale: mod.scale,
+            pos: mod.pos,
+        };
+    }
+    if (drag?.text.text === item.text) {
+        return dragItem(item, drag);
     }
     return item;
 };
