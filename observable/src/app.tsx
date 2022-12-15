@@ -1,9 +1,6 @@
-import * as d3 from 'd3';
-import * as topojson from 'topojson';
 import * as shapefile from 'shapefile';
 import { geoPath } from 'd3-geo';
 import { geoAirocean } from 'd3-geo-polygon';
-import star, { pointsToPath } from './star';
 import * as React from 'react';
 import PathKitInit from 'pathkit-wasm';
 

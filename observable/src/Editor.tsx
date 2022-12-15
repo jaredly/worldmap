@@ -101,7 +101,6 @@ export const Wrapper = () => {
                 >
                     <g transform={`translate(${-pz.tl.x}, ${-pz.tl.y})`}>
                         <Layers data={data} />
-                        <circle cx={pos.x} cy={pos.y} r={10} fill="red" />
                         <rect
                             stroke="red"
                             strokeWidth={1}

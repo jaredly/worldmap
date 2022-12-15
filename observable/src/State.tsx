@@ -1,15 +1,19 @@
+// Ok types
+
+import { Coord } from './star';
+
 export type Text = {
     type: 'Text';
     text: string;
     rotate: number;
     pos: { x: number; y: number };
 };
-type Item = string | Text;
 
 export type Style = {
     fill?: string;
     stroke?: { color: string; width: number };
 };
+
 export type Layer = {
     name: string;
     visible: boolean;
@@ -22,6 +26,20 @@ export type Layer = {
         | { type: 'Path'; items: string[] };
     style: Style;
 };
+
 export type State = {
     layers: Layer[];
+};
+
+export type Mods = {
+    labels: {
+        [key: string]: {
+            rotate: number;
+            pos: { x: number; y: number };
+        };
+    };
+    paths: {
+        points: Coord[];
+        stroke: { color: string; width: number };
+    }[];
 };

@@ -1,15 +1,29 @@
 
 THE EDITOR
 
-- can render stuff
-- can render a rect
-- maybe can clip
+- [x] can render stuff
+- [x] can render a rect
+- [x] zoom and pan pls
+- [x] modify color
+- [x] show/hide layers
+- [ ] move text labels
+	(also, I want the text label location mods to be ... saved separately from the other data. So I can refresh data and it be ok.)
+	(also, any new paths that I make should be similarly in a different place.)
+- [ ] maybe can clip
   - I guess I should validate this first
 	- ok so here's an idea. For the big majority of the stuffs, maybe what I want to do is
 		just rasterize right there. Render it to a canvas, and embed the image.
 		So then I only have to do expensive clipping dealios for the cutting stuff.
 
 		Can I do a "does intersect"?
+
+
+
+screen: 20, 20
+<!-- pz: {x: -} -->
+underlying: 
+
+
 
 
 --
