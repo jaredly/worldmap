@@ -1,4 +1,19 @@
 
+THE EDITOR
+
+- can render stuff
+- can render a rect
+- maybe can clip
+  - I guess I should validate this first
+	- ok so here's an idea. For the big majority of the stuffs, maybe what I want to do is
+		just rasterize right there. Render it to a canvas, and embed the image.
+		So then I only have to do expensive clipping dealios for the cutting stuff.
+
+		Can I do a "does intersect"?
+
+
+--
+
 So, I think maybe I'll make a generic SVG editor dealio? ish?
 Like, no reason to ... tie in the geo stuff, right? I think.
 I mean I guess it could be useful.

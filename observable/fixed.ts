@@ -1,9 +1,11 @@
 import * as d3 from 'd3';
 import * as topojson from 'topojson';
 import * as shapefile from 'shapefile';
-import { geoPath } from 'd3-geo';
+import { GeoPath, geoPath } from 'd3-geo';
 import { geoAirocean } from 'd3-geo-polygon';
 import star, { pointsToPath } from './star';
+import { State, Style, Text } from './State';
+import { FeatureCollection, Geometry, GeoJsonProperties } from 'geojson';
 
 const DOM = {
     element(n) {
@@ -23,27 +25,143 @@ const DOM = {
 };
 
 function renderer(width, height, mode) {
+    if (mode === 'svg') {
+        return svgRenderer(width, height);
+    }
+    return dataRenderer();
+}
+
+const dataRenderer = () => {
+    const state: State = { layers: [] };
+
+    return {
+        context: null,
+        rawPath: (name: string, style: Style, paths: string[]) => {
+            state.layers.push({
+                name,
+                style,
+                contents: {
+                    type: 'Path',
+                    items: paths,
+                },
+                visible: true,
+            });
+        },
+        features: (
+            path: GeoPath,
+            name: string,
+            style: Style,
+            item: FeatureCollection<Geometry, GeoJsonProperties>,
+        ) => {
+            state.layers.push({
+                name,
+                style,
+                visible: true,
+                contents: {
+                    type: 'Path',
+                    items: item.features.map((f) => path(f.geometry)),
+                },
+            });
+        },
+        circles: (
+            path: GeoPath,
+            projection,
+            name: string,
+            radius: number,
+            style: Style,
+            features: FeatureCollection<
+                Geometry,
+                GeoJsonProperties
+            >['features'],
+        ) => {
+            state.layers.push({
+                name,
+                style,
+                visible: true,
+                contents: {
+                    type: 'Path',
+                    items: features.map((f) => {
+                        const [x, y] = path.centroid(f.geometry);
+                        return pointsToPath(
+                            star(
+                                { x, y },
+                                radius,
+                                radius / 2,
+                                5,
+                                labelAngle(projection, [x, y]) + Math.PI,
+                            ),
+                        );
+                    }),
+                },
+            });
+        },
+        node: () => state,
+        labels: (
+            path: GeoPath,
+            projection,
+            name: string,
+            fontSize: number,
+            style: Style,
+            item: FeatureCollection<Geometry, GeoJsonProperties>,
+        ) => {
+            const items: Text[] = item.features.map((f) => {
+                const pos = path.centroid(mainGeometry(path, f.geometry));
+                const angle =
+                    ((labelAngle(projection, pos) - Math.PI / 2) * 180) /
+                    Math.PI;
+                return {
+                    type: 'Text',
+                    text: f.properties.NAME,
+                    pos: { x: pos[0], y: pos[1] },
+                    rotate: angle,
+                };
+            });
+            state.layers.push({
+                name,
+                style: {
+                    ...style,
+                },
+                visible: true,
+                contents: {
+                    type: 'Text',
+                    font: { size: fontSize, family: 'sans-serif' },
+                    items,
+                },
+            });
+        },
+    };
+};
+
+function svgRenderer(width: number, height: number) {
     const svg = d3
         .select(DOM.svg(width, height))
         .attr('title', 'test2')
         .attr('version', 1.1)
         .attr('xmlns', 'http://www.w3.org/2000/svg')
         .attr('xmlns:inkscape', 'http://www.inkscape.org/namespaces/inkscape');
-    const group = (name, style) => {
+    const group = (name, style: Style) => {
         var g = svg
             .append('g')
             .attr(':inkscape:groupmode', 'layer')
             .attr(':inkscape:label', name)
             .attr('fill', style.fill ? style.fill : 'none')
-            .attr('stroke', style.stroke ? style.stroke : 'none');
-        if (style.strokeWidth) return g.attr('stroke-width', style.strokeWidth);
+            .attr('stroke', style.stroke ? style.stroke.color : 'none');
+        if (style.stroke) return g.attr('stroke-width', style.stroke.width);
         return g;
     };
     return {
         context: null,
         svg,
         group,
-        features: (path, title, style, item) => {
+        rawPath: (title: string, style: Style, paths: string[]) => {
+            group(title, style)
+                .selectAll('path')
+                .data(paths)
+                .enter()
+                .append('path')
+                .attr('d', (d) => d);
+        },
+        features: (path, title: string, style: Style, item) => {
             group(title, style)
                 .selectAll('path')
                 .data(item.features)
@@ -52,7 +170,14 @@ function renderer(width, height, mode) {
                 .attr('stroke-width', (d) => d.properties.strokeweig)
                 .attr('d', (d) => path(d.geometry));
         },
-        circles: (path, projection, title, radius, style, features) => {
+        circles: (
+            path,
+            projection,
+            title: string,
+            radius: number,
+            style: Style,
+            features,
+        ) => {
             group(title, style)
                 .selectAll('path')
                 .data(features)
@@ -71,15 +196,8 @@ function renderer(width, height, mode) {
                     );
                 });
         },
-        labels: (
-            path,
-            projection,
-            title,
-            fontSize,
-            { fill, stroke, strokeWidth, above },
-            item,
-        ) => {
-            const ty = above ? -fontSize / 2 : fontSize / 2;
+        labels: (path, projection, title, fontSize, style, item) => {
+            const ty = fontSize / 2;
             const data = item.features.map((f) => {
                 const pos = path.centroid(mainGeometry(path, f.geometry));
                 const angle =
@@ -87,8 +205,11 @@ function renderer(width, height, mode) {
                     Math.PI;
                 return { ...f, center: [pos[0], pos[1]], angle };
             });
-            if (stroke) {
-                group(title + '_shadow', { fill, stroke, strokeWidth })
+            if (style.stroke) {
+                group(title + '_shadow', {
+                    fill: style.fill,
+                    stroke: style.stroke,
+                })
                     .attr('style', `font: ${fontSize}px sans-serif`)
                     .selectAll('text')
                     .data(data)
@@ -105,7 +226,7 @@ function renderer(width, height, mode) {
                     .attr('x', (d) => d.center[0])
                     .attr('y', (d) => d.center[1]);
             }
-            group(title, { fill })
+            group(title, { fill: style.fill })
                 .attr('style', `font: ${fontSize}px sans-serif`)
                 .selectAll('text')
                 .data(data)
@@ -173,59 +294,12 @@ const inversePoint = () => {
     return p.invert(p([0, 0]));
 };
 
-// function consolidate_features(features) {
-//     return features.map((f) => {
-//         if (f.geometry.type === 'MultiLineString') {
-//             return {
-//                 ...f,
-//                 geometry: {
-//                     ...f.geometry,
-//                     coordinates: f.geometry.coordinates.map((line) => {
-//                         const shorter = [];
-//                         for (var i = 0; i < line.length - 1; i += skip) {
-//                             shorter.push(line[i]);
-//                         }
-//                         shorter.push(line[line.length - 1]);
-//                         return shorter;
-//                     }),
-//                 },
-//             };
-//         } else {
-//             return f;
-//         }
-//     });
-// }
-
-// const large_countries = [
-//     'Canada',
-//     'Brazil',
-//     'Russia',
-//     'China',
-//     'India',
-//     'Argentina',
-//     'Australia',
-// ];
-
-// const detailed_provinces = await getShape(
-//     '10m_cultural/ne_10m_admin_1_states_provinces_lines',
-// );
-
-// const show_provinces = {
-//     ...detailed_provinces,
-//     features: consolidate_features(
-//         detailed_provinces.features.filter((f) =>
-//             large_countries.includes(f.properties.adm0_name),
-//         ),
-//     ),
-// };
-
-const output = async () => {
-    var huge = true;
+export const output = async (kind) => {
     var width = 3500;
     var height = width * 2.15;
     const detail = true;
 
-    var render = renderer(width, height, 'svg');
+    var render = renderer(width, height, kind);
 
     var projection = geoAirocean();
     var path = geoPath(projection, render.context);
@@ -242,33 +316,29 @@ const output = async () => {
     );
 
     const names = await getShape('110m_cultural/ne_110m_populated_places');
-    console.log('names', names);
-    console.log(
-        'more',
-        (window.morenames = await getShape(
-            '50m_cultural/ne_50m_populated_places',
-        )),
-    );
+    // console.log('names', names);
+    // console.log(
+    //     'more',
+    //     (window.morenames = await getShape(
+    //         '50m_cultural/ne_50m_populated_places',
+    //     )),
+    // );
 
-    render
-        .group('Border', { stroke: 'red', strokeWidth: 3 })
-        .selectAll('path')
-        .data([await fetch('./110-bevel-outline.path').then((r) => r.text())])
-        .enter()
-        .append('path')
-        .attr('d', (d) => d);
+    render.rawPath('Border', { stroke: { color: 'red', width: 3 } }, [
+        await fetch('./110-bevel-outline.path').then((r) => r.text()),
+    ]);
 
     render.features(
         path,
         'Land',
-        { fill: '#fafafa', stroke: '#777', strokeWidth: 1 },
+        { fill: '#fafafa', stroke: { color: '#777', width: 1 } },
         await getShape('110m_physical/ne_110m_land'),
     );
 
     render.features(
         path,
         'Countries Outlines',
-        { fill: '#aaf', stroke: 'rgba(0, 0, 255, 0.3)', strokeWidth: 1 },
+        { fill: '#aaf', stroke: { color: 'rgba(0, 0, 255, 0.3)', width: 1 } },
         await getShape('110m_cultural/ne_110m_admin_0_countries'),
     );
 
@@ -276,14 +346,21 @@ const output = async () => {
         render.features(
             path,
             'Country boundaries',
-            { stroke: 'red', strokeWidth: 0.5 },
+            { stroke: { color: 'red', width: 0.5 } },
             await getShape('110m_cultural/ne_110m_admin_0_boundary_lines_land'),
         );
 
+        // render.features(
+        //     path,
+        //     'Coastline 10m',
+        //     { fill: 'none', stroke: { color: 'magenta', width: 0.5 } },
+        //     await getShape('10m_physical/ne_10m_land'),
+        // );
+
         render.features(
             path,
-            'Coastline detail',
-            { fill: 'none', stroke: 'magenta', strokeWidth: 0.5 },
+            'Coastline 50m',
+            { fill: 'none', stroke: { color: 'magenta', width: 0.5 } },
             await getShape('50m_physical/ne_50m_land'),
         );
 
@@ -293,45 +370,24 @@ const output = async () => {
             { fill: 'black' },
             await getShape('10m_physical/ne_10m_lakes'),
         );
+
         render.features(
             path,
             'Rivers 10m',
-            { stroke: '#0af', strokeWidth: 0.5 },
+            { stroke: { color: '#0af', width: 0.5 } },
             await getShape(
                 '10m_physical/ne_10m_rivers_lake_centerlines_scale_rank',
             ),
         );
+
         render.features(
             path,
             'Rivers 50m',
-            { stroke: '#000', strokeWidth: 0.5 },
+            { stroke: { color: '#0af', width: 0.5 } },
             await getShape(
                 '50m_physical/ne_50m_rivers_lake_centerlines_scale_rank',
             ),
         );
-
-        // render.circles(
-        //     path,
-        //     projection,
-        //     '1mil',
-        //     2,
-        //     { fill: 'red', strokeWidth: 0.5, stroke: 'black' },
-        //     names.features.filter(
-        //         (f) =>
-        //             f.properties.POP_OTHER > 1 * 1000 * 1000 &&
-        //             f.properties.POP_OTHER < 5 * 1000 * 1000,
-        //     ),
-        // );
-        // render.circles(
-        //     path,
-        //     projection,
-        //     '5mil',
-        //     3,
-        //     { fill: 'magenta', strokeWidth: 0.5, stroke: 'black' },
-        //     names.features.filter(
-        //         (f) => f.properties.POP_OTHER >= 5 * 1000 * 1000,
-        //     ),
-        // );
 
         render.circles(
             path,
@@ -340,14 +396,14 @@ const output = async () => {
             3,
             { fill: 'magenta' },
             names.features.filter(
-                (f) => f.properties.FEATURECLA === 'Admin-0 capital',
+                (f) => f.properties!.FEATURECLA === 'Admin-0 capital',
             ),
         );
 
         render.features(
             path,
             'States lines',
-            { stroke: '#fa0', strokeWidth: 0.5 },
+            { stroke: { color: '#fa0', width: 0.5 } },
             await getShape(
                 '50m_cultural/ne_50m_admin_1_states_provinces_lines',
             ),
@@ -358,7 +414,7 @@ const output = async () => {
             projection,
             'Country Names',
             8,
-            { fill: '#aaa', stroke: 'white', strokeWidth: 2 },
+            { fill: '#aaa', stroke: { color: 'white', width: 2 } },
             await getShape('110m_cultural/ne_110m_admin_0_countries'),
         );
     }
@@ -366,4 +422,4 @@ const output = async () => {
     return render.node();
 };
 
-output().then((node) => document.body.append(node));
+export default () => output('svg').then((node) => document.body.append(node));

@@ -76,12 +76,12 @@ export const Map = () => {
         >
             <path d={data.outline} fill="none" stroke="black" strokeWidth="1" />
             {data.land.features.map((feature) => {
-                return <path d={path(feature.geometry)} fill="#eee" />;
+                return <path d={path(feature.geometry)!} fill="#eee" />;
             })}
             {data.land_boundaries.features.map((feature) => {
                 return (
                     <path
-                        d={path(feature.geometry)}
+                        d={path(feature.geometry)!}
                         stroke="#f00"
                         strokeWidth={0.5}
                         fill="none"
@@ -91,7 +91,7 @@ export const Map = () => {
             {data.land_detail.features.map((feature) => {
                 return (
                     <path
-                        d={path(feature.geometry)}
+                        d={path(feature.geometry)!}
                         stroke="magenta"
                         strokeWidth={0.5}
                         fill="none"
@@ -101,7 +101,7 @@ export const Map = () => {
             {data.rivers.features.map((feature) => {
                 return (
                     <path
-                        d={path(feature.geometry)}
+                        d={path(feature.geometry)!}
                         stroke="#0af"
                         strokeWidth={0.5}
                         fill="none"
