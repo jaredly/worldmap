@@ -26,6 +26,7 @@
     "type": "module",
     "scripts": {
         "roads": "yarn -s esbuild --bundle ok.ts --platform=node --external:shapefile --external:geojson --format=esm | node --input-type=module",
-        "start": "yarn esbuild --external:path --external:fs --bundle src/run.tsx --servedir=. --serve=8002"
+        "um": "yarn esbuild --external:path --external:fs --bundle src/run.tsx --servedir=. --serve=8002",
+        "start": "vite observable"
     }
 }

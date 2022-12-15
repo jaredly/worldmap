@@ -11,8 +11,12 @@ const DOM = {
     },
     svg(width, height) {
         const s = document.createElement('div');
-        s.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg"
-		version="1.1" width="${width}" height="${height}"></svg>`;
+        s.innerHTML = `<svg
+        xmlns="http://www.w3.org/2000/svg"
+		version="1.1"
+        width="${width}"
+        height="${height}"
+        ></svg>`;
         document.body.append(s);
         return s.firstElementChild;
     },
@@ -48,7 +52,7 @@ function renderer(width, height, mode) {
                 .attr('stroke-width', (d) => d.properties.strokeweig)
                 .attr('d', (d) => path(d.geometry));
         },
-        circles: (path, title, radius, style, features) => {
+        circles: (path, projection, title, radius, style, features) => {
             group(title, style)
                 .selectAll('path')
                 .data(features)
@@ -56,7 +60,15 @@ function renderer(width, height, mode) {
                 .append('path')
                 .attr('d', (d) => {
                     const [x, y] = path.centroid(d.geometry);
-                    return pointsToPath(star({ x, y }, radius, radius / 2, 3));
+                    return pointsToPath(
+                        star(
+                            { x, y },
+                            radius,
+                            radius / 2,
+                            5,
+                            labelAngle(projection, [x, y]) + Math.PI,
+                        ),
+                    );
                 });
         },
         labels: (
@@ -211,7 +223,7 @@ const output = async () => {
     var huge = true;
     var width = 3500;
     var height = width * 2.15;
-    const detail = false;
+    const detail = true;
 
     var render = renderer(width, height, 'svg');
 
@@ -230,19 +242,13 @@ const output = async () => {
     );
 
     const names = await getShape('110m_cultural/ne_110m_populated_places');
-
-    // render.features(
-    //     path,
-    //     'Land',
-    //     { fill: '#777' },
-    //     await getShape('110m_physical/ne_110m_land'),
-    // );
-    // render.features(
-    //     path,
-    //     'Land',
-    //     { fill: '#eee' },
-    //     await getShape('50m_physical/ne_50m_land'),
-    // );
+    console.log('names', names);
+    console.log(
+        'more',
+        (window.morenames = await getShape(
+            '50m_cultural/ne_50m_populated_places',
+        )),
+    );
 
     render
         .group('Border', { stroke: 'red', strokeWidth: 3 })
@@ -261,7 +267,7 @@ const output = async () => {
 
     render.features(
         path,
-        'Countries',
+        'Countries Outlines',
         { fill: '#aaf', stroke: 'rgba(0, 0, 255, 0.3)', strokeWidth: 1 },
         await getShape('110m_cultural/ne_110m_admin_0_countries'),
     );
@@ -269,14 +275,14 @@ const output = async () => {
     if (detail) {
         render.features(
             path,
-            'Land boundaries',
+            'Country boundaries',
             { stroke: 'red', strokeWidth: 0.5 },
             await getShape('110m_cultural/ne_110m_admin_0_boundary_lines_land'),
         );
 
         render.features(
             path,
-            'Land detail',
+            'Coastline detail',
             { fill: 'none', stroke: 'magenta', strokeWidth: 0.5 },
             await getShape('50m_physical/ne_50m_land'),
         );
@@ -289,7 +295,7 @@ const output = async () => {
         );
         render.features(
             path,
-            'Rivers',
+            'Rivers 10m',
             { stroke: '#0af', strokeWidth: 0.5 },
             await getShape(
                 '10m_physical/ne_10m_rivers_lake_centerlines_scale_rank',
@@ -297,41 +303,63 @@ const output = async () => {
         );
         render.features(
             path,
-            'Rivers',
+            'Rivers 50m',
             { stroke: '#000', strokeWidth: 0.5 },
             await getShape(
                 '50m_physical/ne_50m_rivers_lake_centerlines_scale_rank',
             ),
         );
 
+        // render.circles(
+        //     path,
+        //     projection,
+        //     '1mil',
+        //     2,
+        //     { fill: 'red', strokeWidth: 0.5, stroke: 'black' },
+        //     names.features.filter(
+        //         (f) =>
+        //             f.properties.POP_OTHER > 1 * 1000 * 1000 &&
+        //             f.properties.POP_OTHER < 5 * 1000 * 1000,
+        //     ),
+        // );
+        // render.circles(
+        //     path,
+        //     projection,
+        //     '5mil',
+        //     3,
+        //     { fill: 'magenta', strokeWidth: 0.5, stroke: 'black' },
+        //     names.features.filter(
+        //         (f) => f.properties.POP_OTHER >= 5 * 1000 * 1000,
+        //     ),
+        // );
+
         render.circles(
             path,
-            '1mil',
-            2,
-            { fill: 'red', strokeWidth: 0.5, stroke: 'black' },
-            names.features.filter(
-                (f) =>
-                    f.properties.POP_OTHER > 1 * 1000 * 1000 &&
-                    f.properties.POP_OTHER < 5 * 1000 * 1000,
-            ),
-        );
-        render.circles(
-            path,
-            '5mil',
+            projection,
+            'Capitals',
             3,
-            { fill: 'magenta', strokeWidth: 0.5, stroke: 'black' },
+            { fill: 'magenta' },
             names.features.filter(
-                (f) => f.properties.POP_OTHER >= 5 * 1000 * 1000,
+                (f) => f.properties.FEATURECLA === 'Admin-0 capital',
             ),
         );
 
         render.features(
             path,
-            'States',
+            'States lines',
             { stroke: '#fa0', strokeWidth: 0.5 },
             await getShape(
                 '50m_cultural/ne_50m_admin_1_states_provinces_lines',
             ),
+        );
+
+        render.labels(
+            path,
+            projection,
+            'Country Names',
+            8,
+            { fill: '#aaa', stroke: 'white', strokeWidth: 2 },
+            await getShape('110m_cultural/ne_110m_admin_0_countries'),
         );
     }
 
