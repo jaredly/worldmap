@@ -124,6 +124,17 @@ export const Wrapper = () => {
     // const height = 1000;
     const width = 3500;
     const height = width * 2.15;
+
+    const [pos, setPos] = React.useState({ x: 0, y: 0 });
+
+    const scale = 4;
+
+    // const dpi = 96;
+    const dpi = 120;
+
+    const sheetW = (280 / 25.4) * dpi;
+    const sheetH = (200 / 25.4) * dpi;
+
     return (
         <div>
             <input
@@ -139,45 +150,64 @@ export const Wrapper = () => {
             />
             Ok data
             <svg
-                width={width / 4}
-                height={height / 4}
+                width={width / scale}
+                height={height / scale}
                 viewBox={`0 0 ${width} ${height}`}
+                onMouseMove={(evt) => {
+                    const box = evt.currentTarget.getBoundingClientRect();
+                    setPos({
+                        x: (evt.clientX - box.left) * scale,
+                        y: (evt.clientY - box.top) * scale,
+                    });
+                }}
             >
-                {data.layers.map((layer, i) => (
-                    <g
-                        key={i}
-                        style={layer.font ? { font: layer.font } : undefined}
-                        fill={layer.fill}
-                        stroke={layer.stroke?.color}
-                        strokeWidth={layer.stroke?.width}
-                    >
-                        {layer.items.map((item, j) =>
-                            item.type === 'Path' ? (
-                                <path
-                                    key={j}
-                                    d={item.path}
-                                    // fill="none"
-                                    // stroke="black"
-                                    // strokeWidth={0.5}
-                                />
-                            ) : (
-                                <text
-                                    key={j}
-                                    x={item.pos.x}
-                                    y={item.pos.y}
-                                    textAnchor="middle"
-                                    transform={`rotate(${item.rotate}, ${item.pos.x}, ${item.pos.y})`}
-                                >
-                                    {item.text}
-                                </text>
-                            ),
-                        )}
-                    </g>
-                ))}
+                <Layers data={data} />
+                <circle cx={pos.x} cy={pos.y} r={10} fill="red" />
+                <rect
+                    stroke="red"
+                    strokeWidth={1}
+                    fill="none"
+                    x={pos.x}
+                    y={pos.y}
+                    width={sheetW}
+                    height={sheetH}
+                />
             </svg>
         </div>
     );
 };
+
+const Layers = React.memo(({ data }: { data: State }) => {
+    return (
+        <>
+            {data.layers.map((layer, i) => (
+                <g
+                    key={i}
+                    style={layer.font ? { font: layer.font } : undefined}
+                    fill={layer.fill}
+                    stroke={layer.stroke?.color}
+                    strokeWidth={layer.stroke?.width}
+                >
+                    {layer.items.map((item, j) =>
+                        item.type === 'Path' ? (
+                            <path key={j} d={item.path} />
+                        ) : (
+                            <text
+                                key={j}
+                                x={item.pos.x}
+                                y={item.pos.y}
+                                textAnchor="middle"
+                                transform={`rotate(${item.rotate}, ${item.pos.x}, ${item.pos.y})`}
+                            >
+                                {item.text}
+                            </text>
+                        ),
+                    )}
+                </g>
+            ))}
+        </>
+    );
+});
 
 export const Editor = () => {
     const PathKit = usePromise(() =>
