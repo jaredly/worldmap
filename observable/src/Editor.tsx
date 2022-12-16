@@ -7,8 +7,22 @@ import { Mods, State, Text } from './State';
 import { useLocalforage } from './useLocalforage';
 import { Coord } from './star';
 
+export type ToolState =
+    | {
+          type: 'crop';
+      }
+    | {
+          type: 'line';
+          layer: number;
+          points: Coord[];
+      }
+    | {
+          type: 'move';
+          selected: number;
+      }
+    | Drag;
 export type Drag = {
-    type: 'label';
+    type: 'label-drag';
     text: Text;
     p0: Coord;
     p1: Coord;
@@ -28,7 +42,7 @@ export const Wrapper = () => {
         mods.layers = [];
     }
 
-    const [drag, setDrag] = React.useState<Drag | null>(null);
+    const [drag, setDrag] = React.useState<ToolState | null>(null);
 
     const width = 1000;
     const height = 1000;
@@ -54,7 +68,7 @@ export const Wrapper = () => {
                 evt.clientY - box.top,
             );
             setDrag({
-                type: 'label',
+                type: 'label-drag',
                 text: text,
                 p0: pos,
                 p1: pos,
@@ -79,6 +93,7 @@ export const Wrapper = () => {
                 <button onClick={() => setData({ layers: [] })}>
                     Clear data
                 </button>
+                {/* {JSON.stringify(pz.pz)} */}
             </div>
             <div
                 style={{
@@ -101,7 +116,7 @@ export const Wrapper = () => {
                         );
                     }}
                     onMouseUp={(evt) => {
-                        if (drag) {
+                        if (drag?.type === 'label-drag') {
                             const changed = dragItem(drag.text, drag);
                             setMods({
                                 ...mods,

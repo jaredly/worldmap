@@ -17,7 +17,17 @@ export function Sidebar({
     setMods: React.Dispatch<React.SetStateAction<Mods>>;
 }) {
     const op = React.useRef<OverlayPanel>(null);
-    const [editing, setEditing] = React.useState<null | number>(null);
+    const [editing, setEditing] = React.useState<
+        | null
+        | {
+              type: 'layer';
+              index: number;
+          }
+        | {
+              type: 'mod';
+              index: number;
+          }
+    >(null);
     const changeLayer = React.useCallback(
         (i: number, fn: (l: EitherLayer) => EitherLayer) => {
             setData((data) => {
@@ -28,16 +38,34 @@ export function Sidebar({
         },
         [],
     );
+    const changeMod = React.useCallback(
+        (i: number, fn: (l: Mods['layers'][0]) => Mods['layers'][0]) => {
+            setMods((data) => {
+                const newLayers = [...data.layers];
+                newLayers[i] = fn(newLayers[i]);
+                return { ...data, layers: newLayers };
+            });
+        },
+        [],
+    );
     return (
         <div>
             <OverlayPanel ref={op} dismissable>
-                {editing != null
-                    ? styleEditor(data, editing, changeLayer)
+                {editing?.type === 'layer'
+                    ? styleEditor(data.layers[editing.index].style, (style) => {
+                          changeLayer(editing.index, (l) => ({ ...l, style }));
+                      })
+                    : editing?.type === 'mod'
+                    ? styleEditor(mods.layers[editing.index].style, (style) => {
+                          changeMod(editing.index, (l) => ({ ...l, style }));
+                      })
                     : null}
             </OverlayPanel>
             {data.layers.map((layer, i) => (
                 <div key={i}>
-                    <button
+                    <input
+                        type="checkbox"
+                        checked={layer.visible}
                         style={
                             layer.visible
                                 ? { cursor: 'pointer' }
@@ -47,7 +75,7 @@ export function Sidebar({
                                       backgroundColor: 'transparent',
                                   }
                         }
-                        onClick={() => {
+                        onChange={() => {
                             const newLayers = [...data.layers];
                             newLayers[i] = {
                                 ...layer,
@@ -55,15 +83,13 @@ export function Sidebar({
                             };
                             setData({ layers: newLayers });
                         }}
-                    >
-                        {layer.visible ? 'Hide' : 'Show'}
-                    </button>
+                    />
                     <span style={{ marginLeft: 5 }} />
                     <span
                         style={colorSquare(layer.style)}
                         onClick={(evt) => {
                             op.current?.toggle(evt);
-                            setEditing(i);
+                            setEditing({ type: 'layer', index: i });
                         }}
                         data-layer={JSON.stringify(layer.style)}
                     />
@@ -86,10 +112,11 @@ export function Sidebar({
                     <span
                         style={colorSquare(layer.style)}
                         onClick={(evt) => {
-                            // op.current?.toggle(evt);
-                            // setEditing(i);
+                            op.current?.toggle(evt);
+                            setEditing({ type: 'mod', index: i });
                         }}
                     />
+                    <span style={{ marginLeft: 5 }} />
                     <BlurInput
                         value={layer.name}
                         onChange={(value) => {
@@ -150,81 +177,67 @@ function styleColor(style: Style) {
 }
 
 function styleEditor(
-    data: State,
-    editing: number,
-    changeLayer: (i: number, fn: (l: EitherLayer) => EitherLayer) => void,
+    style: Style,
+    onChange: (style: Style) => void,
 ): React.ReactNode {
-    const layer = data.layers[editing];
     return (
         <>
-            {layer.style.fill && layer.style.fill !== 'none' ? (
+            {style.fill && style.fill !== 'none' ? (
                 <div>
                     Fill:
                     <ColorChange
-                        value={layer.style.fill!}
+                        value={style.fill!}
                         onChange={(value) => {
-                            changeLayer(editing!, (layer) => ({
-                                ...layer,
-                                style: {
-                                    ...layer.style,
-                                    fill: value,
-                                },
-                            }));
+                            onChange({
+                                ...style,
+                                fill: value,
+                            });
                         }}
                     />
                 </div>
             ) : null}
-            {layer.style.stroke ? (
+            {style.stroke ? (
                 <div>
                     Stroke:
                     <ColorChange
-                        value={layer.style.stroke.color}
+                        value={style.stroke.color}
                         onChange={(value) => {
-                            changeLayer(editing!, (layer) => ({
-                                ...layer,
-                                style: {
-                                    ...layer.style,
-                                    stroke: {
-                                        ...layer.style.stroke!,
-                                        color: value,
-                                    },
+                            onChange({
+                                ...style,
+                                stroke: {
+                                    ...style.stroke!,
+                                    color: value,
                                 },
-                            }));
+                            });
                         }}
                     />
                     Width:
                     <BlurInput
-                        value={layer.style.stroke.width.toString()}
+                        value={style.stroke.width.toString()}
                         onChange={(value) => {
                             const n = +value;
                             if (isNaN(n)) return;
-                            changeLayer(editing!, (layer) => ({
-                                ...layer,
-                                style: {
-                                    ...layer.style,
-                                    stroke: {
-                                        ...layer.style.stroke!,
-                                        width: n,
-                                    },
+                            onChange({
+                                ...style,
+                                stroke: {
+                                    ...style.stroke!,
+                                    width: n,
                                 },
-                            }));
+                            });
                         }}
                     />
                     <button
                         onClick={() => {
-                            changeLayer(editing!, (layer) => ({
-                                ...layer,
-                                style: {
-                                    ...layer.style,
-                                    stroke: {
-                                        ...layer.style.stroke!,
-                                        dotted: !layer.style.stroke!.dotted,
-                                    },
+                            onChange({
+                                ...style,
+                                stroke: {
+                                    ...style.stroke!,
+                                    dotted: !style.stroke!.dotted,
                                 },
-                            }));
+                            });
                         }}
                     >
-                        {layer.style.stroke.dotted ? 'Dotted' : 'Solid'}
+                        {style.stroke.dotted ? 'Dotted' : 'Solid'}
                     </button>
                 </div>
             ) : null}

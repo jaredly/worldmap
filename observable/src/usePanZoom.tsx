@@ -1,14 +1,23 @@
 import * as React from 'react';
+import { useLocalStorage } from './useLocalforage';
 
 export const usePanZoom = (width: number, height: number) => {
     type Pz = { x: number; y: number; scale: number };
-    const [pz, setPz] = React.useState<Pz>({
-        // Top left, in world coordinates
-        x: 0,
-        y: 0,
-        // world * scale = screen
-        scale: 0.2,
-    });
+    const [pz, setPz] = useLocalStorage(
+        'wm-zoom',
+        {
+            // Top left, in world coordinates
+            // x: 0,
+            // y: 0,
+            // // world * scale = screen
+            // scale: 0.2,
+
+            x: 1235,
+            y: 3957,
+            scale: 0.8,
+        },
+        500,
+    );
 
     const toScreen = (x: number, y: number, pz: Pz) => {
         return {
@@ -40,6 +49,7 @@ export const usePanZoom = (width: number, height: number) => {
         toScreen: (x: number, y: number) => toScreen(x, y, pz),
         fromScreen: (x: number, y: number) => fromScreen(x, y, pz),
         tl,
+        pz,
         props: {
             ref,
             // viewBox: `0 0 ${width} ${height}`,

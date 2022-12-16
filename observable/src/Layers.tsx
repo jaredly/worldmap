@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Drag } from './Editor';
+import { Drag, ToolState } from './Editor';
 import { TextLayer, PathLayer, State, Mods, Text } from './State';
 
 const PathLayerV = React.memo(({ layer }: { layer: PathLayer }) => {
@@ -28,7 +28,7 @@ const TextLayerV = ({
     layer: TextLayer;
     mods: Mods;
     setMods: (mods: Mods) => void;
-    drag: Drag | null;
+    drag: ToolState | null;
     startDrag: (text: Text, evt: React.MouseEvent) => void;
 }) => {
     return (
@@ -115,7 +115,11 @@ export const dragItem = (item: Text, drag: Drag) => {
     };
 };
 
-const maybeDrag = (item: Text, drag: Drag | null, mod?: Mods['labels']['']) => {
+const maybeDrag = (
+    item: Text,
+    drag: ToolState | null,
+    mod?: Mods['labels'][''],
+) => {
     if (mod) {
         item = {
             ...item,
@@ -124,7 +128,7 @@ const maybeDrag = (item: Text, drag: Drag | null, mod?: Mods['labels']['']) => {
             pos: mod.pos,
         };
     }
-    if (drag?.text.text === item.text) {
+    if (drag?.type === 'label-drag' && drag.text.text === item.text) {
         return dragItem(item, drag);
     }
     return item;
@@ -140,7 +144,7 @@ export const Layers = ({
     data: State;
     mods: Mods;
     setMods: (mods: Mods) => void;
-    drag: Drag | null;
+    drag: ToolState | null;
     startDrag: (text: Text, evt: React.MouseEvent) => void;
 }) => {
     return (

@@ -28,7 +28,12 @@ export type TextLayer = Layer<{
     items: Text[];
 }>;
 
-export type PathLayer = Layer<{ type: 'Path'; items: string[] }>;
+export type PathLayer = Layer<{
+    type: 'Path';
+    items: string[];
+    vector?: boolean;
+}>;
+
 export type EitherLayer = TextLayer | PathLayer;
 
 export type State = {
@@ -45,7 +50,7 @@ export type Mods = {
     };
     layers: {
         name: string;
-        stroke: { color: string; width: number };
+        style: Style;
         paths: Coord[][];
         moved: {
             [layerName: string]: {
