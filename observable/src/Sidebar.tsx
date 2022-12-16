@@ -214,13 +214,32 @@ export function Sidebar({
             >
                 Add Mod Layer
             </button>
-            <button
-                onClick={() => {
-                    setTool({ type: 'crop', rotate: 0 });
-                }}
-            >
-                Clip it now
-            </button>
+            <div>
+                <button
+                    onClick={() => {
+                        setTool({
+                            type: 'crop',
+                            rotate: 0,
+                            width: 280,
+                            height: 200,
+                        });
+                    }}
+                >
+                    Clip Full
+                </button>
+                <button
+                    onClick={() => {
+                        setTool({
+                            type: 'crop',
+                            rotate: 0,
+                            width: 30,
+                            height: 30,
+                        });
+                    }}
+                >
+                    Clip Small
+                </button>
+            </div>
             <Export data={data} mods={mods} />
             {tool?.type === 'label' ? (
                 <div>

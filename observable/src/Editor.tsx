@@ -11,6 +11,8 @@ export type ToolState =
     | {
           type: 'crop';
           rotate: number;
+          width: number;
+          height: number;
       }
     | {
           type: 'line';
@@ -55,9 +57,10 @@ export const Wrapper = () => {
     const [pos, setPos] = React.useState({ x: 0, y: 0 });
     // const dpi = 96;
     const dpi = 120;
+    const dpm = 120 / 25.4;
 
-    const sheetW = (280 / 25.4) * dpi;
-    const sheetH = (200 / 25.4) * dpi;
+    // const sheetW = (280 / 25.4) * dpi;
+    // const sheetH = (200 / 25.4) * dpi;
     const pz = usePanZoom(width, height);
 
     const startDrag = React.useCallback(
@@ -263,8 +266,8 @@ export const Wrapper = () => {
                             <rect
                                 x={pos.x}
                                 y={pos.y}
-                                width={sheetW}
-                                height={sheetH}
+                                width={drag.width * dpm}
+                                height={drag.height * dpm}
                                 style={{
                                     transformOrigin: `${pos.x}px ${pos.y}px`,
                                 }}
