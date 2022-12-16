@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { Mods, State, Text } from './State';
 import { useLocalforage } from './useLocalforage';
 import { Coord } from './star';
+import { rasterize } from './rasterize';
 
 export type ToolState =
     | {
@@ -38,6 +39,10 @@ export type Drag = {
     mode: 'move' | 'rotate' | 'scale';
 };
 
+// const dpi = 96;
+// const dpi = 120;
+export const dpm = 120 / 25.4;
+
 export const Wrapper = () => {
     const [data, setData] = useLocalforage<State>('worldmap', { layers: [] });
     const [mods, setMods] = useLocalforage<Mods>('worldmap-mods', {
@@ -55,9 +60,6 @@ export const Wrapper = () => {
     const height = 1000;
 
     const [pos, setPos] = React.useState({ x: 0, y: 0 });
-    // const dpi = 96;
-    const dpi = 120;
-    const dpm = 120 / 25.4;
 
     // const sheetW = (280 / 25.4) * dpi;
     // const sheetH = (200 / 25.4) * dpi;
@@ -93,9 +95,15 @@ export const Wrapper = () => {
         layersByName[layer.name] = layer;
     });
 
+    const cropState = React.useRef({ drag, pos, data, mods });
+    cropState.current = { drag, pos, data, mods };
+
     React.useEffect(() => {
         const fn = (evt: KeyboardEvent) => {
-            if (evt.target !== document.body) {
+            if (
+                evt.target !== document.body &&
+                (evt.target! as HTMLElement).nodeName !== 'BUTTON'
+            ) {
                 return;
             }
             if (evt.key === 'ArrowLeft') {
@@ -114,12 +122,15 @@ export const Wrapper = () => {
                     return drag;
                 });
             }
+            if (evt.key === 'Enter') {
+                rasterize(cropState.current);
+            }
         };
         document.addEventListener('keydown', fn);
         return () => {
             document.removeEventListener('keydown', fn);
         };
-    }, []);
+    }, [drag]);
 
     return (
         <div>

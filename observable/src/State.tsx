@@ -29,11 +29,12 @@ export type TextLayer = Layer<{
     items: Text[];
 }>;
 
-export type PathLayer = Layer<{
+export type PathContents = {
     type: 'Path';
     items: string[];
     vector?: boolean;
-}>;
+};
+export type PathLayer = Layer<PathContents>;
 
 export type EitherLayer = TextLayer | PathLayer;
 

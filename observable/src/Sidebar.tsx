@@ -1,5 +1,13 @@
 import * as React from 'react';
-import { EitherLayer, Layer, Mods, State, Style } from './State';
+import {
+    EitherLayer,
+    Layer,
+    Mods,
+    PathContents,
+    PathLayer,
+    State,
+    Style,
+} from './State';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { ColorPicker } from 'primereact/colorpicker';
@@ -89,6 +97,36 @@ export function Sidebar({
                             setData({ layers: newLayers });
                         }}
                     />
+                    <span style={{ marginLeft: 5 }} />
+                    {layer.contents.type === 'Path' ? (
+                        <input
+                            type="checkbox"
+                            checked={!!layer.contents.vector}
+                            style={
+                                layer.contents.vector
+                                    ? { cursor: 'pointer' }
+                                    : {
+                                          cursor: 'pointer',
+                                          border: 'none',
+                                          backgroundColor: 'transparent',
+                                      }
+                            }
+                            onChange={() => {
+                                const newLayers = [...data.layers];
+                                newLayers[i] = {
+                                    ...layer,
+                                    contents: {
+                                        ...(layer.contents as PathContents),
+                                        vector: !(layer as PathLayer).contents
+                                            .vector,
+                                    },
+                                };
+                                setData({ layers: newLayers });
+                            }}
+                        />
+                    ) : (
+                        <span style={{ margin: 5 }}>T</span>
+                    )}
                     <span style={{ marginLeft: 5 }} />
                     <span
                         style={colorSquare(layer.style)}
