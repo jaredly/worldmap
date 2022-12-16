@@ -2,21 +2,105 @@ import * as React from 'react';
 import { Drag, ToolState } from './Editor';
 import { TextLayer, PathLayer, State, Mods, Text } from './State';
 
-const PathLayerV = React.memo(({ layer }: { layer: PathLayer }) => {
-    return (
-        <g
-            fill={layer.style.fill ?? 'none'}
-            data-name={layer.name}
-            stroke={layer.style.stroke?.color}
-            strokeWidth={layer.style.stroke?.width}
-            strokeDasharray={layer.style.stroke?.dotted ? '5,5' : undefined}
-        >
-            {layer.contents.items.map((item, j) => (
-                <path key={j} d={item} />
-            ))}
-        </g>
-    );
-});
+const PathLayerV = React.memo(
+    ({
+        layer,
+        tool,
+        setTool,
+        setMods,
+        mlm,
+    }: {
+        layer: PathLayer;
+        tool?: ToolState['type'];
+        setTool: React.Dispatch<React.SetStateAction<ToolState | null>>;
+        setMods: React.Dispatch<React.SetStateAction<Mods>>;
+        mlm?: Mods['layers'][0]['moved'][''];
+    }) => {
+        return (
+            <g
+                data-name={layer.name}
+                fill={layer.style.fill ?? 'none'}
+                stroke={layer.style.stroke?.color}
+                strokeWidth={layer.style.stroke?.width}
+                strokeDasharray={layer.style.stroke?.dotted ? '5,5' : undefined}
+            >
+                {layer.contents.items.map((item, j) =>
+                    mlm && mlm[j] ? (
+                        tool === 'line' && (
+                            <React.Fragment key={j}>
+                                {toolPoints(layer, setTool)}
+                            </React.Fragment>
+                        )
+                    ) : (
+                        <path
+                            key={j}
+                            d={item}
+                            className={tool === 'move' ? 'hover' : undefined}
+                            onClick={
+                                tool === 'move'
+                                    ? () => {
+                                          setTool((tool) => {
+                                              if (tool?.type !== 'move')
+                                                  return tool;
+
+                                              setMods((mods) => {
+                                                  const layers = [
+                                                      ...mods.layers,
+                                                  ];
+                                                  layers[tool.layer] = {
+                                                      ...layers[tool.layer],
+                                                      moved: {
+                                                          ...layers[tool.layer]
+                                                              .moved,
+                                                          [layer.name]: {
+                                                              ...layers[
+                                                                  tool.layer
+                                                              ].moved[
+                                                                  layer.name
+                                                              ],
+                                                              [j]: true,
+                                                          },
+                                                      },
+                                                  };
+                                                  return { ...mods, layers };
+                                              });
+                                              return null;
+                                          });
+                                      }
+                                    : undefined
+                            }
+                        />
+                    ),
+                )}
+                {tool === 'line' && <>{toolPoints(layer, setTool)}</>}
+            </g>
+        );
+    },
+);
+const parsePath = (path: string) => {
+    let hit = false;
+    const toNum = (n) => {
+        const num = +n;
+        if (isNaN(num) && !hit) {
+            console.log('bad', path, n, JSON.stringify(path.slice(-40)));
+            hit = true;
+        }
+        return num;
+    };
+    if (path.includes(' ')) {
+        return path
+            .replace(/[\nZ]+$/g, '')
+            .slice(1)
+            .split('ZM')
+            .flatMap((sub) =>
+                sub.split('L').map((p) => p.split(' ').map(toNum)),
+            );
+    }
+    return path
+        .slice(1, path.endsWith('Z') ? -1 : undefined)
+        .split('L')
+        .map((m) => m.split(',').map(toNum));
+};
 
 const TextLayerV = ({
     layer,
@@ -140,13 +224,24 @@ export const Layers = ({
     setMods,
     drag,
     startDrag,
+    setTool,
 }: {
     data: State;
     mods: Mods;
-    setMods: (mods: Mods) => void;
+    setMods: React.Dispatch<React.SetStateAction<Mods>>;
     drag: ToolState | null;
     startDrag: (text: Text, evt: React.MouseEvent) => void;
+    setTool: React.Dispatch<React.SetStateAction<ToolState | null>>;
 }) => {
+    const mlm = React.useMemo(() => {
+        const byName: Mods['layers'][0]['moved'] = {};
+        mods.layers.forEach((layer) => {
+            Object.entries(layer.moved).forEach(([name, moved]) => {
+                byName[name] = { ...byName[name], ...moved };
+            });
+        });
+        return byName;
+    }, [mods]);
     return (
         <>
             {data.layers.map((layer, i) =>
@@ -160,9 +255,49 @@ export const Layers = ({
                         startDrag={startDrag}
                     />
                 ) : (
-                    <PathLayerV key={i} layer={layer as PathLayer} />
+                    <PathLayerV
+                        key={i}
+                        layer={layer as PathLayer}
+                        tool={drag?.type}
+                        setTool={setTool}
+                        setMods={setMods}
+                        mlm={mlm[layer.name]}
+                    />
                 ),
             )}
         </>
     );
 };
+function toolPoints(
+    layer: PathLayer,
+    setTool: React.Dispatch<React.SetStateAction<ToolState | null>>,
+) {
+    return layer.contents.items.flatMap((item, j) => {
+        const points = parsePath(item);
+        return points.map((p, i) => (
+            <circle
+                key={`${j}-${i}`}
+                cx={p[0]}
+                cy={p[1]}
+                r={2}
+                strokeWidth={0.5}
+                stroke="magenta"
+                style={{ cursor: 'pointer' }}
+                fill="white"
+                onClick={() => {
+                    setTool((tool) => {
+                        if (tool?.type === 'line') {
+                            console.log('um', tool);
+                            return {
+                                ...tool,
+                                points: [...tool.points, { x: p[0], y: p[1] }],
+                            };
+                        }
+                        console.log('um', tool);
+                        return tool;
+                    });
+                }}
+            />
+        ));
+    });
+}

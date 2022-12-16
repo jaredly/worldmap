@@ -10,6 +10,7 @@ import { Coord } from './star';
 export type ToolState =
     | {
           type: 'crop';
+          rotate: number;
       }
     | {
           type: 'line';
@@ -18,7 +19,7 @@ export type ToolState =
       }
     | {
           type: 'move';
-          selected: number;
+          layer: number;
       }
     | Drag;
 export type Drag = {
@@ -80,6 +81,11 @@ export const Wrapper = () => {
         [pz],
     );
 
+    const layersByName = {};
+    data.layers.forEach((layer) => {
+        layersByName[layer.name] = layer;
+    });
+
     return (
         <div>
             <div>
@@ -112,8 +118,28 @@ export const Wrapper = () => {
                         const spos = { x: evt.clientX, y: evt.clientY };
                         setPos(pos);
                         setDrag((drag) =>
-                            drag ? { ...drag, p1: pos, s1: spos } : drag,
+                            drag?.type === 'label-drag'
+                                ? { ...drag, p1: pos, s1: spos }
+                                : drag,
                         );
+                    }}
+                    onMouseDown={(evt) => {
+                        if (
+                            evt.target === evt.currentTarget &&
+                            drag?.type === 'line'
+                        ) {
+                            const box =
+                                evt.currentTarget.getBoundingClientRect();
+                            const pos = pz.fromScreen(
+                                evt.clientX - box.left,
+                                evt.clientY - box.top,
+                            );
+                            setPos(pos);
+                            setDrag({
+                                ...drag,
+                                points: [...drag.points, pos],
+                            });
+                        }
                     }}
                     onMouseUp={(evt) => {
                         if (drag?.type === 'label-drag') {
@@ -129,8 +155,8 @@ export const Wrapper = () => {
                                     },
                                 },
                             });
+                            setDrag(null);
                         }
-                        setDrag(null);
                     }}
                     {...pz.props}
                 >
@@ -141,16 +167,76 @@ export const Wrapper = () => {
                             setMods={setMods}
                             drag={drag}
                             startDrag={startDrag}
+                            setTool={setDrag}
                         />
-                        {/* <rect
-                            stroke="red"
-                            strokeWidth={1}
-                            fill="none"
-                            x={pos.x}
-                            y={pos.y}
-                            width={sheetW}
-                            height={sheetH}
-                        /> */}
+                        {mods.layers.flatMap((layer, i) => (
+                            <g
+                                key={i}
+                                fill={layer.style.fill ?? 'none'}
+                                stroke={layer.style.stroke?.color}
+                                strokeWidth={layer.style.stroke?.width}
+                                strokeDasharray={
+                                    layer.style.stroke?.dotted
+                                        ? '5,5'
+                                        : undefined
+                                }
+                            >
+                                {layer.paths
+                                    .map((path, j) => (
+                                        <polyline
+                                            key={`${i}-${j}`}
+                                            points={path
+                                                .map((p) => `${p.x},${p.y}`)
+                                                .join(' ')}
+                                            // stroke="magenta"
+                                            // strokeWidth={2}
+                                            // fill="none"
+                                        />
+                                    ))
+                                    .concat(
+                                        Object.entries(layer.moved).flatMap(
+                                            ([name, pos]) => {
+                                                if (!layersByName[name])
+                                                    return [];
+                                                return Object.keys(pos)
+                                                    .filter((k) => pos[k])
+                                                    .map((k) => (
+                                                        <path
+                                                            key={`${i}-${name}-${k}`}
+                                                            d={
+                                                                layersByName[
+                                                                    name
+                                                                ].contents
+                                                                    .items[k]
+                                                            }
+                                                        />
+                                                    ));
+                                            },
+                                        ),
+                                    )}
+                            </g>
+                        ))}
+                        {drag?.type === 'line' ? (
+                            <polyline
+                                points={drag.points
+                                    .map((p) => `${p.x},${p.y}`)
+                                    .join(' ')}
+                                stroke="magenta"
+                                strokeWidth={2}
+                                fill="none"
+                            />
+                        ) : null}
+                        {drag?.type === 'crop' ? (
+                            <rect
+                                x={pos.x}
+                                y={pos.y}
+                                width={sheetW}
+                                height={sheetH}
+                                stroke="magenta"
+                                strokeWidth={2}
+                                fill="none"
+                            />
+                        ) : null}
                     </g>
                 </svg>
                 <Sidebar
@@ -158,6 +244,8 @@ export const Wrapper = () => {
                     setData={setData}
                     mods={mods}
                     setMods={setMods}
+                    tool={drag}
+                    setTool={setDrag}
                 />
             </div>
         </div>

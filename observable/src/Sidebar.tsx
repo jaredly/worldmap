@@ -4,17 +4,22 @@ import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { ColorPicker } from 'primereact/colorpicker';
 import { BlurInput, ColorChange } from './BlurInput';
+import { ToolState } from './Editor';
 
 export function Sidebar({
     data,
     setData,
     mods,
     setMods,
+    tool,
+    setTool,
 }: {
     data: State;
     setData: React.Dispatch<React.SetStateAction<State>>;
     mods: Mods;
     setMods: React.Dispatch<React.SetStateAction<Mods>>;
+    tool: ToolState | null;
+    setTool: React.Dispatch<React.SetStateAction<ToolState | null>>;
 }) {
     const op = React.useRef<OverlayPanel>(null);
     const [editing, setEditing] = React.useState<
@@ -130,6 +135,60 @@ export function Sidebar({
                             });
                         }}
                     />
+                    <button
+                        onClick={() => {
+                            if (tool?.type === 'line' && tool.layer === i) {
+                                setTool(null);
+                            } else {
+                                setTool({
+                                    type: 'line',
+                                    layer: i,
+                                    points: [],
+                                });
+                            }
+                        }}
+                        style={
+                            tool?.type === 'line' && tool.layer === i
+                                ? { backgroundColor: 'red' }
+                                : undefined
+                        }
+                    >
+                        <i className="pi pi-pencil" />
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (tool?.type === 'move' && tool.layer === i) {
+                                setTool(null);
+                            } else {
+                                setTool({
+                                    type: 'move',
+                                    layer: i,
+                                });
+                            }
+                        }}
+                        style={
+                            tool?.type === 'move' && tool.layer === i
+                                ? { backgroundColor: 'red' }
+                                : undefined
+                        }
+                    >
+                        <i className="pi pi-plus" />
+                    </button>
+                    {tool?.type === 'line' && tool.layer === i ? (
+                        <button
+                            onClick={() => {
+                                changeMod(i, (layer) => {
+                                    return {
+                                        ...layer,
+                                        paths: [...layer.paths, tool.points],
+                                    };
+                                });
+                                setTool(null);
+                            }}
+                        >
+                            Commit
+                        </button>
+                    ) : null}
                 </div>
             ))}
             <button
@@ -154,6 +213,13 @@ export function Sidebar({
                 }}
             >
                 Add Mod Layer
+            </button>
+            <button
+                onClick={() => {
+                    setTool({ type: 'crop', rotate: 0 });
+                }}
+            >
+                Clip it now
             </button>
         </div>
     );
@@ -194,8 +260,17 @@ function styleEditor(
                             });
                         }}
                     />
+                    <button
+                        onClick={() => onChange({ ...style, fill: undefined })}
+                    >
+                        No Fill
+                    </button>
                 </div>
-            ) : null}
+            ) : (
+                <button onClick={() => onChange({ ...style, fill: 'black' })}>
+                    Add fill
+                </button>
+            )}
             {style.stroke ? (
                 <div>
                     Stroke:

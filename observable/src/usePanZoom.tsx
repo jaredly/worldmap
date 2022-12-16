@@ -7,14 +7,10 @@ export const usePanZoom = (width: number, height: number) => {
         'wm-zoom',
         {
             // Top left, in world coordinates
-            // x: 0,
-            // y: 0,
+            x: 0,
+            y: 0,
             // // world * scale = screen
-            // scale: 0.2,
-
-            x: 1235,
-            y: 3957,
-            scale: 0.8,
+            scale: 0.2,
         },
         500,
     );

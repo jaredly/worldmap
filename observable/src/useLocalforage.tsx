@@ -36,7 +36,6 @@ export const useLocalStorage = <T,>(
     const bound = React.useMemo(
         () =>
             debounce((value) => {
-                console.log('ok');
                 localStorage[key] = JSON.stringify(value);
             }, bounce),
         [],
