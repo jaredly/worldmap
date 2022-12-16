@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { EitherLayer, Layer, State } from './State';
+import { EitherLayer, Layer, Mods, State, Style } from './State';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Button } from 'primereact/button';
 import { ColorPicker } from 'primereact/colorpicker';
@@ -8,9 +8,13 @@ import { BlurInput, ColorChange } from './BlurInput';
 export function Sidebar({
     data,
     setData,
+    mods,
+    setMods,
 }: {
     data: State;
     setData: React.Dispatch<React.SetStateAction<State>>;
+    mods: Mods;
+    setMods: React.Dispatch<React.SetStateAction<Mods>>;
 }) {
     const op = React.useRef<OverlayPanel>(null);
     const [editing, setEditing] = React.useState<null | number>(null);
@@ -56,17 +60,7 @@ export function Sidebar({
                     </button>
                     <span style={{ marginLeft: 5 }} />
                     <span
-                        style={{
-                            display: 'inline-block',
-                            width: 10,
-                            height: 10,
-                            backgroundColor:
-                                layer.style.fill && layer.style.fill !== 'none'
-                                    ? layer.style.fill
-                                    : layer.style.stroke?.color,
-                            border: '1px solid black',
-                            cursor: 'pointer',
-                        }}
+                        style={colorSquare(layer.style)}
                         onClick={(evt) => {
                             op.current?.toggle(evt);
                             setEditing(i);
@@ -87,8 +81,72 @@ export function Sidebar({
                     </button>
                 </div>
             ))}
+            {mods.layers.map((layer, i) => (
+                <div key={i}>
+                    <span
+                        style={colorSquare(layer.style)}
+                        onClick={(evt) => {
+                            // op.current?.toggle(evt);
+                            // setEditing(i);
+                        }}
+                    />
+                    <BlurInput
+                        value={layer.name}
+                        onChange={(value) => {
+                            setMods((mods) => {
+                                const newLayers = [...mods.layers];
+                                newLayers[i] = {
+                                    ...layer,
+                                    name: value,
+                                };
+                                return { ...mods, layers: newLayers };
+                            });
+                        }}
+                    />
+                </div>
+            ))}
+            <button
+                onClick={() => {
+                    setMods((mods) => {
+                        const newLayers = [...mods.layers];
+                        newLayers.push({
+                            name: 'New Layer',
+                            style: {
+                                fill: 'purple',
+                                stroke: {
+                                    color: 'black',
+                                    width: 1,
+                                    dotted: false,
+                                },
+                            },
+                            paths: [],
+                            moved: {},
+                        });
+                        return { ...mods, layers: newLayers };
+                    });
+                }}
+            >
+                Add Mod Layer
+            </button>
         </div>
     );
+}
+
+function colorSquare(style: Style): React.CSSProperties {
+    return {
+        display: 'inline-block',
+        width: 10,
+        height: 10,
+        backgroundColor: styleColor(style),
+        border: '1px solid black',
+        cursor: 'pointer',
+    };
+}
+
+function styleColor(style: Style) {
+    return style.fill && style.fill !== 'none'
+        ? style.fill
+        : style.stroke?.color;
 }
 
 function styleEditor(
@@ -152,6 +210,22 @@ function styleEditor(
                             }));
                         }}
                     />
+                    <button
+                        onClick={() => {
+                            changeLayer(editing!, (layer) => ({
+                                ...layer,
+                                style: {
+                                    ...layer.style,
+                                    stroke: {
+                                        ...layer.style.stroke!,
+                                        dotted: !layer.style.stroke!.dotted,
+                                    },
+                                },
+                            }));
+                        }}
+                    >
+                        {layer.style.stroke.dotted ? 'Dotted' : 'Solid'}
+                    </button>
                 </div>
             ) : null}
         </>

@@ -21,8 +21,12 @@ export const Wrapper = () => {
     const [data, setData] = useLocalforage<State>('worldmap', { layers: [] });
     const [mods, setMods] = useLocalforage<Mods>('worldmap-mods', {
         labels: {},
-        paths: [],
+        layers: [],
     });
+
+    if (!mods.layers) {
+        mods.layers = [];
+    }
 
     const [drag, setDrag] = React.useState<Drag | null>(null);
 
@@ -134,7 +138,12 @@ export const Wrapper = () => {
                         /> */}
                     </g>
                 </svg>
-                <Sidebar data={data} setData={setData} />
+                <Sidebar
+                    data={data}
+                    setData={setData}
+                    mods={mods}
+                    setMods={setMods}
+                />
             </div>
         </div>
     );

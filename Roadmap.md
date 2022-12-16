@@ -6,12 +6,12 @@ THE EDITOR
 - [x] zoom and pan pls
 - [x] modify color
 - [x] show/hide layers
-- [ ] move text labels
+- [x] move text labels
 	(also, I want the text label location mods to be ... saved separately from the other data. So I can refresh data and it be ok.)
 	(also, any new paths that I make should be similarly in a different place.)
 - [ ] select certain things that would be CUT
 	- and make them NOT CUT
-	... maybe this is "MOVE TO OTHER LAYER"? Yeah.
+	... maybe this is "MOVE TO CUSTOM LAYER"? Yeah.
 - [ ] maybe can clip
   - I guess I should validate this first
 	- ok so here's an idea. For the big majority of the stuffs, maybe what I want to do is

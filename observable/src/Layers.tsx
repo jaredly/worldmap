@@ -9,6 +9,7 @@ const PathLayerV = React.memo(({ layer }: { layer: PathLayer }) => {
             data-name={layer.name}
             stroke={layer.style.stroke?.color}
             strokeWidth={layer.style.stroke?.width}
+            strokeDasharray={layer.style.stroke?.dotted ? '5,5' : undefined}
         >
             {layer.contents.items.map((item, j) => (
                 <path key={j} d={item} />

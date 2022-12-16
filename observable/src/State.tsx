@@ -12,7 +12,7 @@ export type Text = {
 
 export type Style = {
     fill?: string;
-    stroke?: { color: string; width: number };
+    stroke?: { color: string; width: number; dotted?: boolean };
 };
 
 export type Layer<Contents> = {
@@ -43,8 +43,14 @@ export type Mods = {
             scale: number;
         };
     };
-    paths: {
-        points: Coord[];
+    layers: {
+        name: string;
         stroke: { color: string; width: number };
+        paths: Coord[][];
+        moved: {
+            [layerName: string]: {
+                [pathIndex: number]: boolean;
+            };
+        };
     }[];
 };
