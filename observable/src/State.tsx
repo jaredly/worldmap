@@ -8,6 +8,7 @@ export type Text = {
     rotate: number;
     pos: { x: number; y: number };
     scale?: number;
+    weight?: number;
 };
 
 export type Style = {
@@ -46,6 +47,7 @@ export type Mods = {
             rotate: number;
             pos: { x: number; y: number };
             scale: number;
+            weight?: number;
         };
     };
     layers: {

@@ -108,12 +108,14 @@ const TextLayerV = ({
     setMods,
     drag,
     startDrag,
+    setTool,
 }: {
     layer: TextLayer;
     mods: Mods;
     setMods: (mods: Mods) => void;
     drag: ToolState | null;
     startDrag: (text: Text, evt: React.MouseEvent) => void;
+    setTool: React.Dispatch<React.SetStateAction<ToolState | null>>;
 }) => {
     return (
         <g
@@ -140,9 +142,13 @@ const TextLayerV = ({
                             style={{
                                 transformOrigin: `${item.pos.x}px ${item.pos.y}px`,
                             }}
-                            transform={`rotate(${item.rotate}) ${
-                                item.scale ? `scale(${item.scale})` : ''
-                            }`}
+                            strokeWidth={
+                                (layer.style.stroke?.width ?? 1) *
+                                (item.scale ?? 1)
+                            }
+                            fontWeight={item.weight ?? 'normal'}
+                            transform={`rotate(${item.rotate})`}
+                            fontSize={15 * (item.scale ?? 1) + 'px'}
                             onMouseDown={(e) => {
                                 startDrag(item, e);
                             }}
@@ -164,11 +170,15 @@ const TextLayerV = ({
                             style={{
                                 transformOrigin: `${item.pos.x}px ${item.pos.y}px`,
                             }}
-                            transform={`rotate(${item.rotate}) ${
-                                item.scale ? `scale(${item.scale})` : ''
-                            }`}
+                            fontWeight={item.weight ?? 'normal'}
+                            fontSize={15 * (item.scale ?? 1) + 'px'}
+                            transform={`rotate(${item.rotate})`}
                             onMouseDown={(e) => {
                                 startDrag(item, e);
+                            }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setTool({ type: 'label', text: item });
                             }}
                         >
                             {item.text}
@@ -210,6 +220,7 @@ const maybeDrag = (
             rotate: mod.rotate,
             scale: mod.scale,
             pos: mod.pos,
+            weight: mod.weight,
         };
     }
     if (drag?.type === 'label-drag' && drag.text.text === item.text) {
@@ -253,6 +264,7 @@ export const Layers = ({
                         setMods={setMods}
                         drag={drag}
                         startDrag={startDrag}
+                        setTool={setTool}
                     />
                 ) : (
                     <PathLayerV

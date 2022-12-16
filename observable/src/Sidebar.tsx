@@ -221,9 +221,70 @@ export function Sidebar({
             >
                 Clip it now
             </button>
+            <Export data={data} mods={mods} />
+            {tool?.type === 'label' ? (
+                <div>
+                    <div>{tool.text.text}</div>
+                    {mods.labels[tool.text.text].weight ?? '400'}
+                    <input
+                        type="range"
+                        min="400"
+                        max="900"
+                        step="100"
+                        value={
+                            mods.labels[tool.text.text].weight?.toString() ??
+                            '400'
+                        }
+                        onChange={(evt) => {
+                            const num = parseInt(evt.target.value);
+                            if (isNaN(num)) {
+                                return;
+                            }
+                            setMods((data) => {
+                                return {
+                                    ...data,
+                                    labels: {
+                                        ...data.labels,
+                                        [tool.text.text]: {
+                                            ...data.labels[tool.text.text],
+                                            weight: num,
+                                        },
+                                    },
+                                };
+                            });
+                        }}
+                    />
+                </div>
+            ) : null}
         </div>
     );
 }
+
+export const Export = ({ data, mods }: { data: State; mods: Mods }) => {
+    const [url, setUrl] = React.useState(null as null | string);
+    return (
+        <div>
+            <button
+                onClick={() => {
+                    const blob = new Blob([JSON.stringify({ data, mods })], {
+                        type: 'application/json',
+                    });
+                    setUrl(URL.createObjectURL(blob));
+                }}
+            >
+                Export
+            </button>
+            {url ? (
+                <a
+                    href={url}
+                    download={`export-${new Date().toISOString()}.json`}
+                >
+                    Download
+                </a>
+            ) : null}
+        </div>
+    );
+};
 
 function colorSquare(style: Style): React.CSSProperties {
     return {

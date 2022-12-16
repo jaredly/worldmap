@@ -21,6 +21,10 @@ export type ToolState =
           type: 'move';
           layer: number;
       }
+    | {
+          type: 'label';
+          text: Text;
+      }
     | Drag;
 export type Drag = {
     type: 'label-drag';
@@ -86,6 +90,34 @@ export const Wrapper = () => {
         layersByName[layer.name] = layer;
     });
 
+    React.useEffect(() => {
+        const fn = (evt: KeyboardEvent) => {
+            if (evt.target !== document.body) {
+                return;
+            }
+            if (evt.key === 'ArrowLeft') {
+                setDrag((drag) => {
+                    if (drag?.type === 'crop') {
+                        return { ...drag, rotate: drag.rotate - 5 };
+                    }
+                    return drag;
+                });
+            }
+            if (evt.key === 'ArrowRight') {
+                setDrag((drag) => {
+                    if (drag?.type === 'crop') {
+                        return { ...drag, rotate: drag.rotate + 5 };
+                    }
+                    return drag;
+                });
+            }
+        };
+        document.addEventListener('keydown', fn);
+        return () => {
+            document.removeEventListener('keydown', fn);
+        };
+    }, []);
+
     return (
         <div>
             <div>
@@ -149,6 +181,7 @@ export const Wrapper = () => {
                                 labels: {
                                     ...mods.labels,
                                     [drag.text.text]: {
+                                        ...mods.labels[drag.text.text],
                                         scale: changed.scale ?? 1,
                                         pos: changed.pos,
                                         rotate: changed.rotate,
@@ -232,6 +265,10 @@ export const Wrapper = () => {
                                 y={pos.y}
                                 width={sheetW}
                                 height={sheetH}
+                                style={{
+                                    transformOrigin: `${pos.x}px ${pos.y}px`,
+                                }}
+                                transform={`rotate(${drag.rotate ?? 0})`}
                                 stroke="magenta"
                                 strokeWidth={2}
                                 fill="none"
