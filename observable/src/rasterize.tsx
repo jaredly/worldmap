@@ -249,6 +249,29 @@ const clipPath = (
     return parts;
 };
 
+const overlapStatus = (
+    points: Coord[][],
+    pos: Coord,
+    width: number,
+    height: number,
+): 'both' | 'in' | 'out' => {
+    let someIn = false;
+    let someOut = false;
+    for (let run of points) {
+        for (let point of run) {
+            if (within(point, pos, width, height)) {
+                someIn = true;
+            } else {
+                someOut = true;
+            }
+            if (someIn && someOut) {
+                return 'both';
+            }
+        }
+    }
+    return someIn ? 'in' : 'out';
+};
+
 function svgLayer(
     PathKit: PathKit,
     layer: TextLayer | PathLayer,
@@ -270,7 +293,13 @@ function svgLayer(
                     (path) =>
                         `<polyline points="${path
                             .map((p) => `${p.x},${p.y}`)
-                            .join(' ')}" />`,
+                            .join(' ')}"
+                            ${
+                                layer.style.stroke?.dotted
+                                    ? 'stroke-dasharray="5,5"'
+                                    : null
+                            }
+                             />`,
                 )
                 .join('\n');
         } else {
@@ -279,15 +308,17 @@ function svgLayer(
             bounds.close();
             return layer.contents.items
                 .map((path) => {
-                    const points = parsePath(path);
-                    if (
-                        !points.some((points) =>
-                            points.some((point) =>
-                                within(point, pos, width, height),
-                            ),
-                        )
-                    ) {
+                    const status = overlapStatus(
+                        parsePath(path),
+                        pos,
+                        width,
+                        height,
+                    );
+                    if (status === 'out') {
                         return '';
+                    }
+                    if (status === 'in') {
+                        return `<path d="${path}" />`;
                     }
                     const p = PathKit.FromSVGString(path);
                     p.op(bounds, PathKit.PathOp.INTERSECT);
@@ -306,11 +337,11 @@ function svgLayer(
                     item.pos.y
                 }" font-family="Cinzel" font-size="${
                     15 * (item.scale ?? 1)
-                }" font-weight="${item.weight ?? 400}" transform="rotate(${
-                    item.rotate ?? 0
-                }, ${item.pos.x}, ${item.pos.y})" text-anchor="middle">${
-                    item.text
-                }</text>`,
+                }" font-weight="${item.weight ?? 400}" stroke-width="${
+                    (layer.style.stroke?.width ?? 1) * (item.scale ?? 1)
+                }" transform="rotate(${item.rotate ?? 0}, ${item.pos.x}, ${
+                    item.pos.y
+                })" text-anchor="middle">${item.text}</text>`,
         )
         .concat(
             mapped.map(
