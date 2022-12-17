@@ -55,6 +55,7 @@ export type Mods = {
         name: string;
         style: Style;
         paths: Coord[][];
+        visible: boolean;
         moved: {
             [layerName: string]: {
                 [pathIndex: number]: boolean;

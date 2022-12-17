@@ -216,53 +216,57 @@ export const Wrapper = () => {
                             startDrag={startDrag}
                             setTool={setDrag}
                         />
-                        {mods.layers.flatMap((layer, i) => (
-                            <g
-                                key={i}
-                                fill={layer.style.fill ?? 'none'}
-                                stroke={layer.style.stroke?.color}
-                                strokeWidth={layer.style.stroke?.width}
-                                strokeDasharray={
-                                    layer.style.stroke?.dotted
-                                        ? '5,5'
-                                        : undefined
-                                }
-                            >
-                                {layer.paths
-                                    .map((path, j) => (
-                                        <polyline
-                                            key={`${i}-${j}`}
-                                            points={path
-                                                .map((p) => `${p.x},${p.y}`)
-                                                .join(' ')}
-                                            // stroke="magenta"
-                                            // strokeWidth={2}
-                                            // fill="none"
-                                        />
-                                    ))
-                                    .concat(
-                                        Object.entries(layer.moved).flatMap(
-                                            ([name, pos]) => {
-                                                if (!layersByName[name])
-                                                    return [];
-                                                return Object.keys(pos)
-                                                    .filter((k) => pos[k])
-                                                    .map((k) => (
-                                                        <path
-                                                            key={`${i}-${name}-${k}`}
-                                                            d={
-                                                                layersByName[
-                                                                    name
-                                                                ].contents
-                                                                    .items[k]
-                                                            }
-                                                        />
-                                                    ));
-                                            },
-                                        ),
-                                    )}
-                            </g>
-                        ))}
+                        {mods.layers
+                            .filter((l) => l.visible)
+                            .flatMap((layer, i) => (
+                                <g
+                                    key={i}
+                                    fill={layer.style.fill ?? 'none'}
+                                    stroke={layer.style.stroke?.color}
+                                    strokeWidth={layer.style.stroke?.width}
+                                    strokeDasharray={
+                                        layer.style.stroke?.dotted
+                                            ? '5,5'
+                                            : undefined
+                                    }
+                                >
+                                    {layer.paths
+                                        .map((path, j) => (
+                                            <polyline
+                                                key={`${i}-${j}`}
+                                                points={path
+                                                    .map((p) => `${p.x},${p.y}`)
+                                                    .join(' ')}
+                                                // stroke="magenta"
+                                                // strokeWidth={2}
+                                                // fill="none"
+                                            />
+                                        ))
+                                        .concat(
+                                            Object.entries(layer.moved).flatMap(
+                                                ([name, pos]) => {
+                                                    if (!layersByName[name])
+                                                        return [];
+                                                    return Object.keys(pos)
+                                                        .filter((k) => pos[k])
+                                                        .map((k) => (
+                                                            <path
+                                                                key={`${i}-${name}-${k}`}
+                                                                d={
+                                                                    layersByName[
+                                                                        name
+                                                                    ].contents
+                                                                        .items[
+                                                                        k
+                                                                    ]
+                                                                }
+                                                            />
+                                                        ));
+                                                },
+                                            ),
+                                        )}
+                                </g>
+                            ))}
                         {drag?.type === 'line' ? (
                             <polyline
                                 points={drag.points

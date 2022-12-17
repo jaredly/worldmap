@@ -152,6 +152,28 @@ export function Sidebar({
             ))}
             {mods.layers.map((layer, i) => (
                 <div key={i}>
+                    <input
+                        type="checkbox"
+                        checked={layer.visible}
+                        style={
+                            layer.visible
+                                ? { cursor: 'pointer' }
+                                : {
+                                      cursor: 'pointer',
+                                      border: 'none',
+                                      backgroundColor: 'transparent',
+                                  }
+                        }
+                        onChange={() => {
+                            const newLayers = [...mods.layers];
+                            newLayers[i] = {
+                                ...layer,
+                                visible: !layer.visible,
+                            };
+                            setMods({ ...mods, layers: newLayers });
+                        }}
+                    />
+                    <span style={{ marginLeft: 5 }} />
                     <span
                         style={colorSquare(layer.style)}
                         onClick={(evt) => {
@@ -243,6 +265,7 @@ export function Sidebar({
                                     dotted: false,
                                 },
                             },
+                            visible: true,
                             paths: [],
                             moved: {},
                         });

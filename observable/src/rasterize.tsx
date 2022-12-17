@@ -1,9 +1,10 @@
-import { Mods, PathLayer, State } from './State';
+import { EitherLayer, Layer, Mods, PathLayer, State, TextLayer } from './State';
 import { ToolState, dpm } from './Editor';
-import { maybeDrag } from './Layers';
+import { dragItem, maybeDrag } from './Layers';
 import { Coord } from './star';
+import PathKitInit, { PathKit } from 'pathkit-wasm';
 
-export function rasterize({
+export async function rasterize({
     drag,
     pos,
     data,
@@ -33,6 +34,10 @@ export function rasterize({
     ctx.scale(scale, scale);
     ctx.translate(-pos.x, -pos.y);
 
+    const PathKit = await PathKitInit({
+        locateFile: (file: string) => './node_modules/pathkit-wasm/bin/' + file,
+    });
+
     data.layers.forEach((layer) => {
         if (!layer.visible) {
             return;
@@ -52,8 +57,6 @@ export function rasterize({
 
                 ctx.translate(item.pos.x, item.pos.y);
                 ctx.rotate(((item.rotate ?? 0) * Math.PI) / 180);
-                // ctx.strokeText(item.text, item.pos.x, item.pos.y);
-                // ctx.fillText(item.text, item.pos.x, item.pos.y);
                 const w = ctx.measureText(item.text).width;
                 ctx.strokeText(item.text, -w / 2, 0);
                 ctx.fillText(item.text, -w / 2, 0);
@@ -76,22 +79,28 @@ export function rasterize({
         });
     });
 
-    const layersByName = {};
+    const layersByName: { [key: string]: EitherLayer } = {};
     data.layers.forEach((layer) => {
         layersByName[layer.name] = layer;
     });
 
     const node = document.createElement('div');
     node.innerHTML = `
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}">
-    <image x="0" y="0" width="${width * scale}" height="${height * scale}"
-        xlink:href="${canvas.toDataURL()}" transform="scale(${1 / scale})" />
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${(
+        width / dpm
+    ).toFixed(2)}mm" height="${(height / dpm).toFixed(
+        2,
+    )}mm" viewBox="0 0 ${width} ${height}">
+    <!-- <image x="0" y="0" width="${width * scale}" height="${height * scale}"
+        xlink:href="${canvas.toDataURL()}" transform="scale(${
+        1 / scale
+    })" /> -->
         <g transform="translate(${-pos.x}, ${-pos.y})" >
             ${data.layers
                 .filter(
                     (l) =>
-                        l.contents.type === 'Path' &&
-                        l.contents.vector &&
+                        // l.contents.type === 'Path' &&
+                        // l.contents.vector &&
                         l.visible,
                 )
                 .map(
@@ -99,21 +108,13 @@ export function rasterize({
                         `<g fill="${layer.style.fill ?? 'none'}" stroke="${
                             layer.style.stroke?.color
                         }" stroke-width="${layer.style.stroke?.width}">
-                ${(layer as PathLayer).contents.items
-                    .flatMap(parsePath)
-                    .flatMap((points) => clipPath(points, pos, width, height))
-                    .map(
-                        (path) =>
-                            `<polyline points="${path
-                                .map((p) => `${p.x},${p.y}`)
-                                .join(' ')}" />`,
-                    )
-                    .join('\n')}
+                ${svgLayer(PathKit, layer, pos, width, height, mods)}
                 </g>`,
                 )
                 .join('\n')}
 
                 ${mods.layers
+                    .filter((l) => l.visible)
                     .flatMap(
                         (layer, i) =>
                             `<g
@@ -141,11 +142,11 @@ export function rasterize({
                                     ([name, moved]) => {
                                         if (!layersByName[name]) return [];
                                         return Object.keys(moved)
-                                            .filter((k) => moved[k])
+                                            .filter((k) => moved[+k])
                                             .map(
                                                 (k) =>
                                                     layersByName[name].contents
-                                                        .items[k],
+                                                        .items[+k],
                                             )
                                             .flatMap(parsePath)
                                             .flatMap((points) =>
@@ -186,10 +187,10 @@ export function rasterize({
     // img.src = canvas.toDataURL();
 }
 
-const toNum = (m) => {
+const toNum = (m: string) => {
     const num = parseFloat(m);
     if (isNaN(num)) {
-        console.warn('o', m);
+        console.warn('o', m == null ? +m : JSON.stringify(m));
     }
     return num;
 };
@@ -206,7 +207,13 @@ const parsePath = (path: string) => {
             }
             const points = line.split('L');
             const parsed = points.map((point) => {
-                const [x, y] = point.split(/[,\s]/g).map(toNum);
+                if (!point.includes(' ') && !point.includes(',')) {
+                    console.warn('Not double?', point);
+                }
+                const [x, y] = point
+                    .split(/[,\s]+/g)
+                    .filter(Boolean)
+                    .map(toNum);
                 return { x, y };
             });
             if (closed) {
@@ -241,6 +248,86 @@ const clipPath = (
     }
     return parts;
 };
+
+function svgLayer(
+    PathKit: PathKit,
+    layer: TextLayer | PathLayer,
+    pos: { x: number; y: number },
+    width: number,
+    height: number,
+    mods: Mods,
+) {
+    if (layer.contents.type === 'Path') {
+        if (
+            layer.contents.vector ||
+            !layer.style.fill ||
+            layer.style.fill === 'none'
+        ) {
+            return layer.contents.items
+                .flatMap(parsePath)
+                .flatMap((points) => clipPath(points, pos, width, height))
+                .map(
+                    (path) =>
+                        `<polyline points="${path
+                            .map((p) => `${p.x},${p.y}`)
+                            .join(' ')}" />`,
+                )
+                .join('\n');
+        } else {
+            const bounds = PathKit.NewPath();
+            bounds.rect(pos.x, pos.y, width, height);
+            bounds.close();
+            return layer.contents.items
+                .map((path) => {
+                    const points = parsePath(path);
+                    if (
+                        !points.some((points) =>
+                            points.some((point) =>
+                                within(point, pos, width, height),
+                            ),
+                        )
+                    ) {
+                        return '';
+                    }
+                    const p = PathKit.FromSVGString(path);
+                    p.op(bounds, PathKit.PathOp.INTERSECT);
+                    return `<path d="${p.toSVGString()}" fillMode="${p.getFillTypeString()}" />`;
+                })
+                .join('\n');
+        }
+    }
+    const mapped = layer.contents.items.map((item) =>
+        maybeDrag(item, null, mods.labels[item.text]),
+    );
+    return mapped
+        .map(
+            (item) =>
+                `<text x="${item.pos.x}" y="${
+                    item.pos.y
+                }" font-family="Cinzel" font-size="${
+                    15 * (item.scale ?? 1)
+                }" font-weight="${item.weight ?? 400}" transform="rotate(${
+                    item.rotate ?? 0
+                }, ${item.pos.x}, ${item.pos.y})" text-anchor="middle">${
+                    item.text
+                }</text>`,
+        )
+        .concat(
+            mapped.map(
+                (item) =>
+                    `<text x="${item.pos.x}" y="${
+                        item.pos.y
+                    }" font-family="Cinzel" font-size="${
+                        15 * (item.scale ?? 1)
+                    }" font-weight="${item.weight ?? 400}" transform="rotate(${
+                        item.rotate ?? 0
+                    }, ${item.pos.x}, ${
+                        item.pos.y
+                    })" stroke="none" text-anchor="middle">${item.text}</text>`,
+            ),
+        )
+        .join('\n');
+}
 
 function within(point: Coord, pos: Coord, width: number, height: number) {
     return (
