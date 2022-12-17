@@ -3,7 +3,7 @@ import { output } from './fixed';
 import { usePanZoom } from './usePanZoom';
 import { dragItem, Layers } from './Layers';
 import { Sidebar } from './Sidebar';
-import { Mods, State, Text } from './State';
+import { EitherLayer, Mods, State, Text } from './State';
 import { useLocalforage } from './useLocalforage';
 import { Coord } from './star';
 import { rasterize } from './rasterize';
@@ -90,7 +90,7 @@ export const Wrapper = () => {
         [pz],
     );
 
-    const layersByName = {};
+    const layersByName: { [key: string]: EitherLayer } = {};
     data.layers.forEach((layer) => {
         layersByName[layer.name] = layer;
     });
@@ -248,7 +248,7 @@ export const Wrapper = () => {
                                                     if (!layersByName[name])
                                                         return [];
                                                     return Object.keys(pos)
-                                                        .filter((k) => pos[k])
+                                                        .filter((k) => pos[+k])
                                                         .map((k) => (
                                                             <path
                                                                 key={`${i}-${name}-${k}`}
@@ -257,8 +257,8 @@ export const Wrapper = () => {
                                                                         name
                                                                     ].contents
                                                                         .items[
-                                                                        k
-                                                                    ]
+                                                                        +k
+                                                                    ] as string
                                                                 }
                                                             />
                                                         ));

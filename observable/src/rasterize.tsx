@@ -146,7 +146,7 @@ export async function rasterize({
                                             .map(
                                                 (k) =>
                                                     layersByName[name].contents
-                                                        .items[+k],
+                                                        .items[+k] as string,
                                             )
                                             .flatMap(parsePath)
                                             .flatMap((points) =>
@@ -195,7 +195,7 @@ const toNum = (m: string) => {
     return num;
 };
 
-export const parsePath = (path: string) => {
+export const parsePath = (path: string): Coord[][] => {
     const parts = path.replace(/\s$/g, '').split('M');
     return parts
         .filter(Boolean)
