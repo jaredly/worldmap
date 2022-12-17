@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { Drag, ToolState } from './Editor';
+import { parsePath } from './rasterize';
+import { Coord } from './star';
 import { TextLayer, PathLayer, State, Mods, Text } from './State';
 
 const PathLayerV = React.memo(
@@ -77,30 +79,6 @@ const PathLayerV = React.memo(
         );
     },
 );
-const parsePath = (path: string) => {
-    let hit = false;
-    const toNum = (n) => {
-        const num = +n;
-        if (isNaN(num) && !hit) {
-            console.log('bad', path, n, JSON.stringify(path.slice(-40)));
-            hit = true;
-        }
-        return num;
-    };
-    if (path.includes(' ')) {
-        return path
-            .replace(/[\nZ]+$/g, '')
-            .slice(1)
-            .split('ZM')
-            .flatMap((sub) =>
-                sub.split('L').map((p) => p.split(' ').map(toNum)),
-            );
-    }
-    return path
-        .slice(1, path.endsWith('Z') ? -1 : undefined)
-        .split('L')
-        .map((m) => m.split(',').map(toNum));
-};
 
 const TextLayerV = ({
     layer,
@@ -280,17 +258,18 @@ export const Layers = ({
         </>
     );
 };
+
 function toolPoints(
     layer: PathLayer,
     setTool: React.Dispatch<React.SetStateAction<ToolState | null>>,
 ) {
     return layer.contents.items.flatMap((item, j) => {
-        const points = parsePath(item);
-        return points.map((p, i) => (
+        const points: Coord[] = parsePath(item).flatMap((x) => x);
+        return points.map(({ x, y }, i) => (
             <circle
                 key={`${j}-${i}`}
-                cx={p[0]}
-                cy={p[1]}
+                cx={x}
+                cy={y}
                 r={2}
                 strokeWidth={0.5}
                 stroke="magenta"
@@ -302,7 +281,7 @@ function toolPoints(
                             console.log('um', tool);
                             return {
                                 ...tool,
-                                points: [...tool.points, { x: p[0], y: p[1] }],
+                                points: [...tool.points, { x, y }],
                             };
                         }
                         console.log('um', tool);

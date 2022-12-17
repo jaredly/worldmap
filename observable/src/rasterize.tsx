@@ -195,7 +195,7 @@ const toNum = (m: string) => {
     return num;
 };
 
-const parsePath = (path: string) => {
+export const parsePath = (path: string) => {
     const parts = path.replace(/\s$/g, '').split('M');
     return parts
         .filter(Boolean)
