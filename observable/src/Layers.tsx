@@ -110,6 +110,7 @@ const TextLayerV = ({
                 strokeLinejoin="round"
             >
                 {layer.contents.items.map((item, j) => {
+                    // const oitem = item;
                     item = maybeDrag(item, drag, mods.labels[item.text]);
                     return (
                         <text
@@ -138,6 +139,7 @@ const TextLayerV = ({
             </g>
             <g>
                 {layer.contents.items.map((item, j) => {
+                    const oitem = item;
                     item = maybeDrag(item, drag, mods.labels[item.text]);
                     return (
                         <text
@@ -156,7 +158,7 @@ const TextLayerV = ({
                             }}
                             onClick={(e) => {
                                 e.preventDefault();
-                                setTool({ type: 'label', text: item });
+                                setTool({ type: 'label', text: item, oitem });
                             }}
                         >
                             {item.text}
@@ -237,7 +239,18 @@ export const Layers = ({
                 !layer.visible ? null : layer.contents.type === 'Text' ? (
                     <TextLayerV
                         key={i}
-                        layer={layer as TextLayer}
+                        layer={{
+                            ...(layer as TextLayer),
+                            contents: {
+                                ...layer.contents,
+                                items: layer.contents.items.concat(
+                                    mods.extraLabels.map((m) => ({
+                                        ...m,
+                                        type: 'Text',
+                                    })),
+                                ),
+                            },
+                        }}
                         mods={mods}
                         setMods={setMods}
                         drag={drag}

@@ -1,4 +1,45 @@
 
+LASER CUTTING
+
+Test 1:
+13%, 100mm/s - I'd love to get this a lot faster
+20%, 10mm/s - 3x (didn't fall out, but basically)
+
+Test 2:
+14%, 200mm/s -- oooh much better definition, I do like it
+
+Test 3:
+17%, 300mm/s - maybe too light?
+
+Test 4:
+20%, 300mm/s
+
+Test 5:
+25%, 300mm/s
+
+Test 6:
+25%, 250mm/s
+
+Test 7:
+25%, 250mm/s, Lakes & Captial stars are #555 instead of #000
+
+Test 8:
+25%, 250mm/s, Capitals at #111, Lakes at #333
+
+^ I think this is what we'll go with!
+
+
+US ENG:
+250mm/s, 25%. 1:52 start, estimated 40 minutes.
+
+
+
+FINAL COUNTDOWN
+
+- [ ] I'd maybe like to be able to add some custom text?
+  - like french guaiana?
+
+
 THE EDITOR
 
 - [x] can render stuff
@@ -9,10 +50,10 @@ THE EDITOR
 - [x] move text labels
 	(also, I want the text label location mods to be ... saved separately from the other data. So I can refresh data and it be ok.)
 	(also, any new paths that I make should be similarly in a different place.)
-- [ ] select certain things that would be CUT
+- [x] select certain things that would be CUT
 	- and make them NOT CUT
 	... maybe this is "MOVE TO CUSTOM LAYER"? Yeah.
-- [ ] maybe can clip
+- [x] maybe can clip
   - I guess I should validate this first
 	- ok so here's an idea. For the big majority of the stuffs, maybe what I want to do is
 		just rasterize right there. Render it to a canvas, and embed the image.

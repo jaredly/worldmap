@@ -27,7 +27,9 @@ export type ToolState =
     | {
           type: 'label';
           text: Text;
+          oitem: Text;
       }
+    | { type: 'add-label' }
     | Drag;
 export type Drag = {
     type: 'label-drag';
@@ -48,10 +50,14 @@ export const Wrapper = () => {
     const [mods, setMods] = useLocalforage<Mods>('worldmap-mods', {
         labels: {},
         layers: [],
+        extraLabels: [],
     });
 
     if (!mods.layers) {
         mods.layers = [];
+    }
+    if (!mods.extraLabels) {
+        mods.extraLabels = [];
     }
 
     const [drag, setDrag] = React.useState<ToolState | null>(null);
@@ -61,8 +67,6 @@ export const Wrapper = () => {
 
     const [pos, setPos] = React.useState({ x: 0, y: 0 });
 
-    // const sheetW = (280 / 25.4) * dpi;
-    // const sheetH = (200 / 25.4) * dpi;
     const pz = usePanZoom(width, height);
 
     const startDrag = React.useCallback(
@@ -170,6 +174,27 @@ export const Wrapper = () => {
                         );
                     }}
                     onMouseDown={(evt) => {
+                        if (drag?.type === 'add-label') {
+                            const box =
+                                evt.currentTarget.getBoundingClientRect();
+                            const pos = pz.fromScreen(
+                                evt.clientX - box.left,
+                                evt.clientY - box.top,
+                            );
+                            setMods({
+                                ...mods,
+                                extraLabels: [
+                                    ...mods.extraLabels,
+                                    {
+                                        text: 'New label',
+                                        pos: pos,
+                                        rotate: 0,
+                                        scale: 1,
+                                    },
+                                ],
+                            });
+                            setDrag(null);
+                        }
                         if (
                             evt.target === evt.currentTarget &&
                             drag?.type === 'line'
@@ -237,9 +262,6 @@ export const Wrapper = () => {
                                                 points={path
                                                     .map((p) => `${p.x},${p.y}`)
                                                     .join(' ')}
-                                                // stroke="magenta"
-                                                // strokeWidth={2}
-                                                // fill="none"
                                             />
                                         ))
                                         .concat(

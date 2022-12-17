@@ -98,6 +98,29 @@ export function Sidebar({
                         }}
                     />
                     <span style={{ marginLeft: 5 }} />
+                    <button
+                        onClick={() => {
+                            const newLayers = [...data.layers];
+                            const layer = newLayers[i];
+                            newLayers.splice(i, 1);
+                            newLayers.splice(i - 1, 0, layer);
+                            setData({ layers: newLayers });
+                        }}
+                    >
+                        Up
+                    </button>
+                    <button
+                        onClick={() => {
+                            const newLayers = [...data.layers];
+                            const layer = newLayers[i];
+                            newLayers.splice(i, 1);
+                            newLayers.splice(i + 1, 0, layer);
+                            setData({ layers: newLayers });
+                        }}
+                    >
+                        Down
+                    </button>
+                    <span style={{ marginLeft: 5 }} />
                     {layer.contents.type === 'Path' ? (
                         <input
                             type="checkbox"
@@ -276,36 +299,7 @@ export function Sidebar({
                 Add Mod Layer
             </button>
             <div>
-                <button
-                    onClick={() => {
-                        if (tool?.type === 'crop') {
-                            return setTool(null);
-                        }
-                        setTool({
-                            type: 'crop',
-                            rotate: 0,
-                            width: 280,
-                            height: 200,
-                        });
-                    }}
-                >
-                    Clip Full
-                </button>
-                <button
-                    onClick={() => {
-                        if (tool?.type === 'crop') {
-                            return setTool(null);
-                        }
-                        setTool({
-                            type: 'crop',
-                            rotate: 0,
-                            width: 30,
-                            height: 30,
-                        });
-                    }}
-                >
-                    Clip Small
-                </button>
+                <Clips tool={tool} setTool={setTool} />
             </div>
             <Export data={data} mods={mods} />
             {tool?.type === 'label' ? (
@@ -342,6 +336,13 @@ export function Sidebar({
                     />
                 </div>
             ) : null}
+            <button
+                onClick={() => {
+                    setTool({ type: 'add-label' });
+                }}
+            >
+                Add label
+            </button>
         </div>
     );
 }
@@ -466,3 +467,62 @@ function styleEditor(
         </>
     );
 }
+
+export const Clips = ({
+    tool,
+    setTool,
+}: {
+    tool: ToolState | null;
+    setTool: (tool: ToolState | null) => void;
+}) => {
+    const [width, setWidth] = React.useState(280);
+    const [height, setHeight] = React.useState(200);
+    return (
+        <div>
+            <input
+                type="number"
+                min="0"
+                max="280"
+                value={width}
+                onChange={(evt) => setWidth(+evt.target.value)}
+            />
+            <input
+                type="number"
+                min="0"
+                max="200"
+                value={height}
+                onChange={(evt) => setHeight(+evt.target.value)}
+            />
+            <button
+                onClick={() => {
+                    if (tool?.type === 'crop') {
+                        return setTool(null);
+                    }
+                    setTool({
+                        type: 'crop',
+                        rotate: 0,
+                        width: width,
+                        height: height,
+                    });
+                }}
+            >
+                Clip Full
+            </button>
+            <button
+                onClick={() => {
+                    if (tool?.type === 'crop') {
+                        return setTool(null);
+                    }
+                    setTool({
+                        type: 'crop',
+                        rotate: 0,
+                        width: 30,
+                        height: 30,
+                    });
+                }}
+            >
+                Clip Small
+            </button>
+        </div>
+    );
+};

@@ -62,4 +62,11 @@ export type Mods = {
             };
         };
     }[];
+    extraLabels: {
+        text: string;
+        rotate: number;
+        pos: { x: number; y: number };
+        scale: number;
+        weight?: number;
+    }[];
 };
