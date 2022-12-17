@@ -209,7 +209,7 @@ export const dragItem = (item: Text, drag: Drag) => {
     };
 };
 
-const maybeDrag = (
+export const maybeDrag = (
     item: Text,
     drag: ToolState | null,
     mod?: Mods['labels'][''],

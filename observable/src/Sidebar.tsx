@@ -255,6 +255,9 @@ export function Sidebar({
             <div>
                 <button
                     onClick={() => {
+                        if (tool?.type === 'crop') {
+                            return setTool(null);
+                        }
                         setTool({
                             type: 'crop',
                             rotate: 0,
@@ -267,6 +270,9 @@ export function Sidebar({
                 </button>
                 <button
                     onClick={() => {
+                        if (tool?.type === 'crop') {
+                            return setTool(null);
+                        }
                         setTool({
                             type: 'crop',
                             rotate: 0,
