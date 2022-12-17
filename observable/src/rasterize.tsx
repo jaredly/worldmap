@@ -19,65 +19,14 @@ export async function rasterize({
         return null;
     }
 
-    const scale = 10;
-
-    const width = drag.width * dpm;
-    const height = drag.height * dpm;
-    const canvas = document.createElement('canvas');
-    // document.body.append(canvas);
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    canvas.style.width = `${(width * scale) / 2}px`;
-    canvas.style.height = `${(height * scale) / 2}px`;
-    const ctx = canvas.getContext('2d')!;
-
-    ctx.scale(scale, scale);
-    ctx.translate(-pos.x, -pos.y);
-
     const PathKit = await PathKitInit({
         locateFile: (file: string) => './node_modules/pathkit-wasm/bin/' + file,
     });
 
-    data.layers.forEach((layer) => {
-        if (!layer.visible) {
-            return;
-        }
-        if (layer.contents.type === 'Text') {
-            layer.contents.items.forEach((item) => {
-                item = maybeDrag(item, null, mods.labels[item.text]);
-                ctx.font = `normal ${item.weight ?? 400} ${
-                    15 * (item.scale ?? 1)
-                }px Cinzel`;
-                ctx.strokeStyle = layer.style.stroke!.color;
-                ctx.lineWidth = layer.style.stroke!.width * (item.scale ?? 1);
-                ctx.lineJoin = 'round';
-                ctx.fillStyle = layer.style.fill!;
+    const width = drag.width * dpm;
+    const height = drag.height * dpm;
 
-                ctx.save();
-
-                ctx.translate(item.pos.x, item.pos.y);
-                ctx.rotate(((item.rotate ?? 0) * Math.PI) / 180);
-                const w = ctx.measureText(item.text).width;
-                ctx.strokeText(item.text, -w / 2, 0);
-                ctx.fillText(item.text, -w / 2, 0);
-
-                ctx.restore();
-            });
-            return;
-        }
-        if (layer.contents.vector) {
-            return;
-        }
-        layer.contents.items.forEach((path) => {
-            const p = new Path2D(path);
-            if (layer.style.fill && layer.style.fill !== 'none') {
-                ctx.fill(p);
-            }
-            ctx.strokeStyle = layer.style.stroke?.color ?? 'none';
-            ctx.lineWidth = layer.style.stroke?.width ?? 1;
-            ctx.stroke(p);
-        });
-    });
+    const bounds: Bounds = { width, height, pos, rotate: drag.rotate };
 
     const layersByName: { [key: string]: EitherLayer } = {};
     data.layers.forEach((layer) => {
@@ -91,24 +40,17 @@ export async function rasterize({
     ).toFixed(2)}mm" height="${(height / dpm).toFixed(
         2,
     )}mm" viewBox="0 0 ${width} ${height}">
-    <!-- <image x="0" y="0" width="${width * scale}" height="${height * scale}"
-        xlink:href="${canvas.toDataURL()}" transform="scale(${
-        1 / scale
-    })" /> -->
-        <g transform="translate(${-pos.x}, ${-pos.y})" >
+        <g transform="translate(${-pos.x}, ${-pos.y}) ${
+        drag.rotate != 0 ? `rotate(${-drag.rotate}, ${pos.x}, ${pos.y})` : ''
+    }" >
             ${data.layers
-                .filter(
-                    (l) =>
-                        // l.contents.type === 'Path' &&
-                        // l.contents.vector &&
-                        l.visible,
-                )
+                .filter((l) => l.visible)
                 .map(
                     (layer) =>
                         `<g fill="${layer.style.fill ?? 'none'}" stroke="${
                             layer.style.stroke?.color
                         }" stroke-width="${layer.style.stroke?.width}">
-                ${svgLayer(PathKit, layer, pos, width, height, mods)}
+                ${svgLayer(PathKit, layer, bounds, mods)}
                 </g>`,
                 )
                 .join('\n')}
@@ -125,49 +67,7 @@ export async function rasterize({
                             layer.style.stroke?.dotted ? '5,5' : ''
                         }"
                     >
-                        ${layer.paths
-                            .flatMap((points) =>
-                                clipPath(points, pos, width, height),
-                            )
-                            .map(
-                                (path, j) =>
-                                    `<polyline
-                                    points="${path
-                                        .map((p) => `${p.x},${p.y}`)
-                                        .join(' ')}"
-                                />`,
-                            )
-                            .concat(
-                                Object.entries(layer.moved).flatMap(
-                                    ([name, moved]) => {
-                                        if (!layersByName[name]) return [];
-                                        return Object.keys(moved)
-                                            .filter((k) => moved[+k])
-                                            .map(
-                                                (k) =>
-                                                    layersByName[name].contents
-                                                        .items[+k] as string,
-                                            )
-                                            .flatMap(parsePath)
-                                            .flatMap((points) =>
-                                                clipPath(
-                                                    points,
-                                                    pos,
-                                                    width,
-                                                    height,
-                                                ),
-                                            )
-                                            .map(
-                                                (path) =>
-                                                    `<polyline
-                                    points="${path
-                                        .map((p) => `${p.x},${p.y}`)
-                                        .join(' ')}"
-                                />`,
-                                            );
-                                    },
-                                ),
-                            )}
+                        ${svgModLayer(layer, bounds, layersByName)}
                     </g>`,
                     )
                     .join('\n')}
@@ -182,15 +82,12 @@ export async function rasterize({
     link.download = 'map.svg';
     link.append(node);
     document.body.append(link);
-    // const img = document.createElement('img');
-    // document.body.append(img);
-    // img.src = canvas.toDataURL();
 }
 
 const toNum = (m: string) => {
     const num = parseFloat(m);
     if (isNaN(num)) {
-        console.warn('o', m == null ? +m : JSON.stringify(m));
+        console.warn('toNum got a NaN', m == null ? +m : JSON.stringify(m));
     }
     return num;
 };
@@ -225,16 +122,11 @@ export const parsePath = (path: string): Coord[][] => {
 };
 
 // OPEN PATH: if you want closed, append the first point to the end
-const clipPath = (
-    points: Coord[],
-    pos: Coord,
-    width: number,
-    height: number,
-) => {
+const clipPath = (points: Coord[], bounds: Bounds) => {
     const parts: Coord[][] = [];
     let current: Coord[] = [];
     points.forEach((point) => {
-        if (within(point, pos, width, height)) {
+        if (within(point, bounds)) {
             current.push(point);
         } else {
             if (current.length) {
@@ -251,15 +143,13 @@ const clipPath = (
 
 const overlapStatus = (
     points: Coord[][],
-    pos: Coord,
-    width: number,
-    height: number,
+    bounds: Bounds,
 ): 'both' | 'in' | 'out' => {
     let someIn = false;
     let someOut = false;
     for (let run of points) {
         for (let point of run) {
-            if (within(point, pos, width, height)) {
+            if (within(point, bounds)) {
                 someIn = true;
             } else {
                 someOut = true;
@@ -272,12 +162,49 @@ const overlapStatus = (
     return someIn ? 'in' : 'out';
 };
 
+function svgModLayer(
+    layer: {
+        name: string;
+        style: import('/Users/jared/clone/art/worldmap/observable/src/State').Style;
+        paths: Coord[][];
+        visible: boolean;
+        moved: { [layerName: string]: { [pathIndex: number]: boolean } };
+    },
+    bounds: Bounds,
+    layersByName: { [key: string]: EitherLayer },
+) {
+    return layer.paths
+        .flatMap((points) => clipPath(points, bounds))
+        .map(
+            (path, j) => `<polyline
+                                    points="${path
+                                        .map((p) => `${p.x},${p.y}`)
+                                        .join(' ')}"
+                                />`,
+        )
+        .concat(
+            Object.entries(layer.moved).flatMap(([name, moved]) => {
+                if (!layersByName[name]) return [];
+                return Object.keys(moved)
+                    .filter((k) => moved[+k])
+                    .map((k) => layersByName[name].contents.items[+k] as string)
+                    .flatMap(parsePath)
+                    .flatMap((points) => clipPath(points, bounds))
+                    .map(
+                        (path) => `<polyline
+                                    points="${path
+                                        .map((p) => `${p.x},${p.y}`)
+                                        .join(' ')}"
+                                />`,
+                    );
+            }),
+        );
+}
+
 function svgLayer(
     PathKit: PathKit,
     layer: TextLayer | PathLayer,
-    pos: { x: number; y: number },
-    width: number,
-    height: number,
+    bounds: Bounds,
     mods: Mods,
 ) {
     if (layer.contents.type === 'Path') {
@@ -288,7 +215,7 @@ function svgLayer(
         ) {
             return layer.contents.items
                 .flatMap(parsePath)
-                .flatMap((points) => clipPath(points, pos, width, height))
+                .flatMap((points) => clipPath(points, bounds))
                 .map(
                     (path) =>
                         `<polyline points="${path
@@ -303,17 +230,17 @@ function svgLayer(
                 )
                 .join('\n');
         } else {
-            const bounds = PathKit.NewPath();
-            bounds.rect(pos.x, pos.y, width, height);
-            bounds.close();
+            const boundPath = PathKit.NewPath();
+            boundPath.rect(
+                bounds.pos.x,
+                bounds.pos.y,
+                bounds.width,
+                bounds.height,
+            );
+            boundPath.close();
             return layer.contents.items
                 .map((path) => {
-                    const status = overlapStatus(
-                        parsePath(path),
-                        pos,
-                        width,
-                        height,
-                    );
+                    const status = overlapStatus(parsePath(path), bounds);
                     if (status === 'out') {
                         return '';
                     }
@@ -321,7 +248,7 @@ function svgLayer(
                         return `<path d="${path}" />`;
                     }
                     const p = PathKit.FromSVGString(path);
-                    p.op(bounds, PathKit.PathOp.INTERSECT);
+                    p.op(boundPath, PathKit.PathOp.INTERSECT);
                     return `<path d="${p.toSVGString()}" fillMode="${p.getFillTypeString()}" />`;
                 })
                 .join('\n');
@@ -360,11 +287,34 @@ function svgLayer(
         .join('\n');
 }
 
-function within(point: Coord, pos: Coord, width: number, height: number) {
+type Bounds = {
+    pos: Coord;
+    width: number;
+    height: number;
+    rotate: number;
+};
+
+function within(point: Coord, { pos, width, height, rotate }: Bounds) {
+    if (rotate != 0) {
+        // console.log('within', rotate, point, pos);
+        point = rotatePoint(point, pos, -rotate);
+    }
     return (
         point.x >= pos.x &&
         point.x <= pos.x + width &&
         point.y >= pos.y &&
         point.y <= pos.y + height
     );
+}
+function rotatePoint(point: Coord, pos: Coord, rotate: number): Coord {
+    /* Rotates a point around pos by rotate radians */
+    rotate = (rotate * Math.PI) / 180;
+    const x = point.x - pos.x;
+    const y = point.y - pos.y;
+    const cos = Math.cos(rotate);
+    const sin = Math.sin(rotate);
+    return {
+        x: x * cos - y * sin + pos.x,
+        y: x * sin + y * cos + pos.y,
+    };
 }
