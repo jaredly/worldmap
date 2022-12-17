@@ -244,10 +244,7 @@ export const Layers = ({
                             contents: {
                                 ...layer.contents,
                                 items: layer.contents.items.concat(
-                                    mods.extraLabels.map((m) => ({
-                                        ...m,
-                                        type: 'Text',
-                                    })),
+                                    mods.extraLabels as Text[],
                                 ),
                             },
                         }}

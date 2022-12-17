@@ -304,6 +304,33 @@ export function Sidebar({
             <Export data={data} mods={mods} />
             {tool?.type === 'label' ? (
                 <div>
+                    {mods.extraLabels.includes(tool.oitem as any) ? (
+                        <BlurInput
+                            value={tool.text.text.replace('\n', '\\n')}
+                            onChange={(value) => {
+                                value = value.replace('\\n', '\n');
+                                const idx = mods.extraLabels.indexOf(
+                                    tool.oitem as any,
+                                );
+                                if (idx === -1) {
+                                    return;
+                                }
+                                setMods((mods) => {
+                                    const extraLabels = [...mods.extraLabels];
+                                    extraLabels[idx] = {
+                                        ...extraLabels[idx],
+                                        text: value,
+                                    };
+                                    return {
+                                        ...mods,
+                                        extraLabels,
+                                    };
+                                });
+                            }}
+                        />
+                    ) : (
+                        ''
+                    )}
                     <div>{tool.text.text}</div>
                     {mods.labels[tool.text.text].weight ?? '400'}
                     <input
@@ -334,6 +361,56 @@ export function Sidebar({
                             });
                         }}
                     />
+                    <div>
+                        Scale:
+                        <BlurInput
+                            value={mods.labels[tool.text.text].scale.toString()}
+                            onChange={(value) => {
+                                const n = parseFloat(value);
+                                if (isNaN(n)) {
+                                    return;
+                                }
+                                setMods((data) => {
+                                    return {
+                                        ...data,
+                                        labels: {
+                                            ...data.labels,
+                                            [tool.text.text]: {
+                                                ...data.labels[tool.text.text],
+                                                scale: n,
+                                            },
+                                        },
+                                    };
+                                });
+                            }}
+                        />
+                    </div>
+                    <div>
+                        Rotate:
+                        <BlurInput
+                            value={mods.labels[
+                                tool.text.text
+                            ].rotate.toString()}
+                            onChange={(value) => {
+                                const n = parseFloat(value);
+                                if (isNaN(n)) {
+                                    return;
+                                }
+                                setMods((data) => {
+                                    return {
+                                        ...data,
+                                        labels: {
+                                            ...data.labels,
+                                            [tool.text.text]: {
+                                                ...data.labels[tool.text.text],
+                                                rotate: n,
+                                            },
+                                        },
+                                    };
+                                });
+                            }}
+                        />
+                    </div>
                 </div>
             ) : null}
             <button
