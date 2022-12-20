@@ -31,7 +31,26 @@ Test 8:
 
 US ENG:
 250mm/s, 25%. 1:52 start, estimated 40 minutes.
+CUT: 25% 10mm/s (12mAmp draw, well below the ~18-20 max that people talk about)
+Took 3 passes.
+A fair amount of burning, which I don't love a ton. I wonder what I can do.
+Like an air fan?
 
+## NEXT ONE : CANADA?
+
+How to reduce burn?
+- [-] blow air, somehow made it worse
+- [-] mask? ok masking before the engraving is way bad, but maybe I could try masking after engraving?
+		feels a little fraught, but maybe.
+- [ ] mask after engrave
+
+UGH Why is the red light district twice?
+oh maybe that's why? It was in the original layer, and then also in the move?
+- [x] fix the double border issue
+- [ ] filter out labels that are outside of the bounds
+
+
+##
 
 
 FINAL COUNTDOWN
