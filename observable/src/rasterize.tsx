@@ -1,4 +1,13 @@
-import { EitherLayer, Layer, Mods, PathLayer, State, TextLayer } from './State';
+import {
+    EitherLayer,
+    Layer,
+    Mods,
+    PathLayer,
+    State,
+    Style,
+    Text,
+    TextLayer,
+} from './State';
 import { ToolState, dpm } from './Editor';
 import { dragItem, maybeDrag } from './Layers';
 import { Coord } from './star';
@@ -50,7 +59,22 @@ export async function rasterize({
                         `<g fill="${layer.style.fill ?? 'none'}" stroke="${
                             layer.style.stroke?.color
                         }" stroke-width="${layer.style.stroke?.width}">
-                ${svgLayer(PathKit, layer, bounds, mods)}
+                ${svgLayer(
+                    PathKit,
+                    layer.contents.type === 'Text'
+                        ? {
+                              ...(layer as TextLayer),
+                              contents: {
+                                  ...layer.contents,
+                                  items: layer.contents.items.concat(
+                                      mods.extraLabels as Text[],
+                                  ),
+                              },
+                          }
+                        : layer,
+                    bounds,
+                    mods,
+                )}
                 </g>`,
                 )
                 .join('\n')}
@@ -162,10 +186,13 @@ const overlapStatus = (
     return someIn ? 'in' : 'out';
 };
 
+const pointsd = (points: Coord[]) =>
+    `M${points.map((p) => `${p.x},${p.y}`).join('L')}`;
+
 function svgModLayer(
     layer: {
         name: string;
-        style: import('/Users/jared/clone/art/worldmap/observable/src/State').Style;
+        style: Style;
         paths: Coord[][];
         visible: boolean;
         moved: { [layerName: string]: { [pathIndex: number]: boolean } };
@@ -175,13 +202,7 @@ function svgModLayer(
 ) {
     return layer.paths
         .flatMap((points) => clipPath(points, bounds))
-        .map(
-            (path, j) => `<polyline
-                                    points="${path
-                                        .map((p) => `${p.x},${p.y}`)
-                                        .join(' ')}"
-                                />`,
-        )
+        .map((path, j) => `<path d="${pointsd(path)}" />`)
         .concat(
             Object.entries(layer.moved).flatMap(([name, moved]) => {
                 if (!layersByName[name]) return [];
@@ -190,13 +211,7 @@ function svgModLayer(
                     .map((k) => layersByName[name].contents.items[+k] as string)
                     .flatMap(parsePath)
                     .flatMap((points) => clipPath(points, bounds))
-                    .map(
-                        (path) => `<polyline
-                                    points="${path
-                                        .map((p) => `${p.x},${p.y}`)
-                                        .join(' ')}"
-                                />`,
-                    );
+                    .map((path) => `<path d="${pointsd(path)}" />`);
             }),
         );
 }
@@ -218,9 +233,7 @@ function svgLayer(
                 .flatMap((points) => clipPath(points, bounds))
                 .map(
                     (path) =>
-                        `<polyline points="${path
-                            .map((p) => `${p.x},${p.y}`)
-                            .join(' ')}"
+                        `<path d="${pointsd(path)}"
                             ${
                                 layer.style.stroke?.dotted
                                     ? 'stroke-dasharray="5,5"'
@@ -254,9 +267,9 @@ function svgLayer(
                 .join('\n');
         }
     }
-    const mapped = layer.contents.items.map((item) =>
-        maybeDrag(item, null, mods.labels[item.text]),
-    );
+    const mapped = layer.contents.items
+        .map((item) => maybeDrag(item, null, mods.labels[item.text]))
+        .filter((item) => within(item.pos, bounds));
     return mapped
         .map(
             (item) =>

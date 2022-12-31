@@ -36,6 +36,13 @@ Took 3 passes.
 A fair amount of burning, which I don't love a ton. I wonder what I can do.
 Like an air fan?
 
+
+
+BIG LASER BACK
+
+20mm/s 45 % was kinda ok?
+
+
 ## NEXT ONE : CANADA?
 
 How to reduce burn?
